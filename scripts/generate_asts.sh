@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Base directory containing subfolders with Solidity contracts
-BASE_DIR="/path/to/solidity/contracts"
+BASE_DIR="dataset/aisc/source"
 
 # Base output directory for ASTs
-OUTPUT_BASE_DIR="/path/to/ast_output"
+OUTPUT_BASE_DIR="dataset/aisc/ast"
 
 # Check if solc is installed
 if ! command -v solc &> /dev/null
@@ -23,9 +23,9 @@ process_file() {
     local contract_name="${filename%.*}"
     local output_file="$output_dir/$contract_name.ast.json"
 
-    # Compile contract to get AST and save it
+    # Compile contract to get AST using ast-compact-json and save it
     echo "Processing $sol_file..."
-    solc --ast-json "$sol_file" > "$output_file"
+    solc --ast-compact-json "$sol_file" | sed '1,4d' > "$output_file"
 }
 
 # Function to process directories recursively
