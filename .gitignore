@@ -1037,4 +1037,6 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 
-/dataset/cgt/ast/
+/dataset/aisc/
+/dataset/cgt/
+/asset
