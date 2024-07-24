@@ -1,1 +1,11 @@
-# Essential packages numpy pandas scikit-learn  # Hugging Face Transformers with GPU support transformers  # Gradient Boosting and Random Forest xgboost  # tqdm for progress bars tqdm  # Ensure the appropriate versions of additional packages joblib threadpoolctl scipy  # Additional package (optional) tokenizers  # pip install torch==2.1.0+cu118 torchvision==0.16.0+cu118 torchaudio==2.1.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html 
+# pip install torch==2.1.0+cu118 torchvision==0.16.0+cu118 torchaudio==2.1.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+torch==2.3.1
+torchvision
+numpy==2.0.1
+pandas
+scikit-learn==1.5.1
+networkx
+torch-geometric
+tqdm==4.66.4
+transformers==4.42.4
+xgboost
