@@ -1,11 +1,8 @@
-import os
 from collections import Counter
 from typing import Dict, List, Tuple
 
 import numpy as np
 from tqdm import tqdm
-
-from src.classes.DataPreprocessor import DataPreprocessor, INPUTS
 
 
 class EmbeddingProcessor:
@@ -89,20 +86,3 @@ class EmbeddingProcessor:
         glove_embeddings = self.load_glove_embeddings()
         self.create_embedding_matrix(glove_embeddings)
         return len(self.vocabulary), self.embedding_dim, self.embedding_matrix
-
-
-if __name__ == "__main__":
-    # Usage
-    preprocessor = DataPreprocessor()
-
-    embedding_processor = EmbeddingProcessor(glove_file=os.path.join("..", "asset", "glove.6B.100d.txt"),
-                                             embedding_dim=100)
-    vocab_len, embed_dim, embed_matrix = embedding_processor.process_embeddings(INPUTS)
-
-    # Access processed data
-    sequences = embedding_processor.text_to_sequences(INPUTS)
-    seq_padded = embedding_processor.pad_sequences(sequences)
-
-    print("Vocabulary Length:", vocab_len)
-    print("Embedding Dimension:", embed_dim)
-    print("Embedding Matrix Shape:", embed_matrix.shape)

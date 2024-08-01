@@ -1,20 +1,20 @@
 from typing import Dict
 
 import torch
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset
-from transformers import RobertaForSequenceClassification, RobertaTokenizer
 
-from src.classes.BertModelTrainer import BERTModelTrainer
 from src.classes.CrossValidator import CrossValidator
 from src.classes.DataPreprocessor import DataPreprocessor
-from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, DEVICE
+from src.classes.FFNNClassifier import FFNNClassifier
+from src.classes.Trainer import Trainer
+from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, MAX_FEATURES
 from src.utility import make_reproducible, get_file_ext, get_num_labels, init_arg_parser, make_log_dir, get_file_id
-
-BERT_MODEL_TYPE = 'microsoft/codebert-base'
 
 
 def main(config: Dict):
+    # Initialize the DataPreprocessor
     print("Initializing DataPreprocessor...")
     preprocessor = DataPreprocessor(
         file_type=config['file_type'],
@@ -25,77 +25,59 @@ def main(config: Dict):
         subset=config['subset']
     )
 
+    # Load and process the data
     print("Loading and processing data...")
     preprocessor.load_and_process_data()
 
+    # Access processed data
     print("Accessing processed data...")
     inputs = preprocessor.get_inputs()
     labels = preprocessor.get_labels()
 
-    print("Initializing RobertaForSequenceClassification model...")
-    model = RobertaForSequenceClassification.from_pretrained(
-        config['bert_model_type'],
-        num_labels=config['num_labels'],
-        ignore_mismatched_sizes=True
-    )
-    model.config.problem_type = "multi_label_classification"
-    model.to(DEVICE)
+    # Initialize the FFNNClassifier
+    print("Initializing the FFNNClassifier...")
+    model = FFNNClassifier(input_size=config["max_features"], output_size=config["num_labels"])
 
-    print("Initializing RobertaTokenizer...")
-    tokenizer = RobertaTokenizer.from_pretrained(config['bert_model_type'], ignore_mismatched_sizes=True)
+    # Initialize the TF-IDF vectorizer
+    print("Initializing the TF-IDF vectorizer...")
+    vectorizer = TfidfVectorizer(max_features=config["max_features"])
 
-    print("Tokenizing inputs...")
-    x, y = tokenizer(
-        inputs,
-        add_special_tokens=True,
-        max_length=512,
-        return_token_type_ids=False,
-        padding="max_length",
-        truncation=True,
-        return_attention_mask=True,
-        return_tensors='pt'
-    ), labels
+    # Convert the data to PyTorch tensors
+    x = torch.FloatTensor(vectorizer.fit_transform(inputs).toarray())
+    y = torch.FloatTensor(labels)
 
+    # Split the data into training and test sets
     print("Splitting data into training and test sets...")
     x_train, x_test, y_train, y_test = train_test_split(
-        x['input_ids'], y,
-        test_size=config['test_size'],
-        random_state=config['random_seed']
+        x, y, test_size=config['test_size'], random_state=config['random_seed']
     )
+    train_data = TensorDataset(x_train, y_train)
+    test_data = TensorDataset(x_test, y_test)
 
-    print("Splitting attention masks for training and test sets...")
-    train_masks, test_masks, _, _ = train_test_split(
-        x['attention_mask'], y,
-        test_size=config['test_size'],
-        random_state=config['random_seed']
-    )
-
-    print("Creating TensorDataset objects for training and testing...")
-    train_data = TensorDataset(x_train, train_masks, torch.tensor(y_train).float())
-    test_data = TensorDataset(x_test, test_masks, torch.tensor(y_test).float())
-
-    print("Initializing CrossValidator...")
+    # Start cross-validation
+    print("Starting cross-validation...")
     cross_validator = CrossValidator(
-        trainer=BERTModelTrainer(model),
-        train_data=train_data,
-        test_data=test_data,
+        Trainer(model),
+        train_data,
+        test_data,
         num_epochs=config['num_epochs'],
         num_folds=config['num_folds'],
         batch_size=config['batch_size']
     )
 
     print("Starting k-fold cross-validation...")
-    cross_validator.k_fold_cv(log_id="bert")
+    cross_validator.k_fold_cv(log_id="ffnn", log_dir=config["log_dir"])
 
 
 if __name__ == '__main__':
-    # Parse command-line arguments for configurations
+    # Initialize argument parser and add custom arguments
     parser = init_arg_parser()
-    parser.add_argument("--bert_model_type", type=str, default=BERT_MODEL_TYPE, help="BERT model type")
+    parser.add_argument("--max_features", type=int, default=MAX_FEATURES, help="Maximum features for TF-IDF vectorizer")
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE, help="Batch size")
     parser.add_argument("--num_epochs", type=int, default=NUM_EPOCHS, help="Number of epochs")
     parser.add_argument("--learning_rate", type=float, default=LR, help="Learning rate")
 
+    # Parse command-line arguments
     args = parser.parse_args()
     config = vars(args)
 
@@ -108,7 +90,7 @@ if __name__ == '__main__':
     # Get the file ID based on the file type
     config["file_id"] = get_file_id(config["file_type"])
 
-    # Get the num_labels based on the subset of data to consider
+    # Get the number of labels based on the subset of data to consider
     config["num_labels"] = get_num_labels(config["subset"])
 
     # Create the logging directory

@@ -2,10 +2,10 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import KFold
 from sklearn.multiclass import OneVsRestClassifier
 
-from src.settings import CLASSIFIERS, VECTORIZER, NUM_FOLDS, RANDOM_SEED
 from src.utility import save_results, compute_metrics
 
 
@@ -14,16 +14,28 @@ class ClassifiersPoolEvaluator:
     ClassifiersPoolEvaluator class for evaluating a pool of classifiers using TF-IDF features and k-fold cross-validation.
     """
 
-    def __init__(self, inputs, labels):
+    def __init__(self, inputs: List[str], labels: List[List[int]], classifiers: Dict[str, object],
+                 vectorizer: TfidfVectorizer, num_folds: int, random_seed: int):
         """
         Initialize the ClassifiersPoolEvaluator with TF-IDF vectorizer and a dictionary of classifiers.
+
+        :param inputs: List of input documents.
+        :param labels: List of labels corresponding to the input documents.
+        :param classifiers: Dictionary of classifiers to evaluate.
+        :param vectorizer: TF-IDF vectorizer for transforming input documents.
+        :param num_folds: Number of folds for k-fold cross-validation.
+        :param random_seed: Random seed for reproducibility.
         """
-        # Define a dictionary of classifiers to evaluate
+        self.__classifiers = classifiers
+        self.__num_folds = num_folds
+        self.__random_seed = random_seed
 
         # Transform the documents into TF-IDF features
-        self.X = VECTORIZER.fit_transform(inputs)
+        print("Transforming input documents into TF-IDF features...")
+        self.X = vectorizer.fit_transform(inputs)
 
         # Transform the labels into a numpy array
+        print("Converting labels to numpy array...")
         self.y = np.array(labels)
 
     def __evaluate_fold(self, classifier: OneVsRestClassifier, train_index: List[int], test_index: List[int],
@@ -37,13 +49,13 @@ class ClassifiersPoolEvaluator:
         :param fold_num: The fold number.
         :return: A dictionary of computed metrics.
         """
-        X_train, X_test = self.X[train_index], self.X[test_index]
+        x_train, x_test = self.X[train_index], self.X[test_index]
         y_train, y_test = self.y[train_index], self.y[test_index]
 
         # Train the classifier on the training data
-        classifier.fit(X_train, y_train)
+        classifier.fit(x_train, y_train)
         # Make predictions on the test data
-        predictions = classifier.predict(X_test)
+        predictions = classifier.predict(x_test)
 
         # Compute metrics using the provided utility function
         metrics = compute_metrics(y_test, predictions)
@@ -60,7 +72,7 @@ class ClassifiersPoolEvaluator:
         :param classifier: The classifier to be evaluated.
         :return: A DataFrame containing the results of each fold.
         """
-        kf = KFold(n_splits=NUM_FOLDS, shuffle=True, random_state=RANDOM_SEED)
+        kf = KFold(n_splits=self.__num_folds, shuffle=True, random_state=self.__random_seed)
         # Evaluate the classifier on each fold and collect the results
         results = []
         for fold_num, (train_index, test_index) in enumerate(kf.split(self.X), 1):
@@ -69,14 +81,14 @@ class ClassifiersPoolEvaluator:
         # Return the results as a DataFrame
         return pd.DataFrame(results)
 
-    def pool_evaluation(self) -> None:
+    def pool_evaluation(self, log_dir="") -> None:
         """
-        Run the evaluation for each classifier defined in self.classifiers.
+        Run the evaluation for each classifier defined in self.__classifiers.
         """
-        # Run the evaluation for each classifier defined in self.classifiers
-        for classifier_name, classifier in CLASSIFIERS.items():
+        # Run the evaluation for each classifier defined in self.__classifiers
+        for classifier_name, classifier in self.__classifiers.items():
             print(f"\nTesting classifier: {classifier_name}\n")
             # Evaluate the classifier and get the metrics DataFrame
             metrics_df = self.__k_fold_cv(OneVsRestClassifier(classifier))
             # Save the results using the provided utility function
-            save_results(metrics_df, f"{classifier_name}.csv")
+            save_results(metrics_df, f"{classifier_name}.csv", log_dir=log_dir)
