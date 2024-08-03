@@ -2,9 +2,9 @@ import os
 from typing import Dict
 
 import torch
-from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset
 
+from src.classes.ClassBalancer import ClassBalancer
 from src.classes.CrossValidator import CrossValidator
 from src.classes.DataPreprocessor import DataPreprocessor
 from src.classes.EmbeddingProcessor import EmbeddingProcessor
@@ -60,9 +60,10 @@ def main(config: Dict):
 
     # Split the data into training and test sets
     print("Splitting data into training and test sets...")
-    x_train, x_test, y_train, y_test = train_test_split(
+    x_train, x_test, y_train, y_test = ClassBalancer.train_test_split(
         x, y, test_size=config['test_size'], random_state=config['random_seed']
     )
+
     train_data = TensorDataset(x_train, y_train)
     test_data = TensorDataset(x_test, y_test)
 

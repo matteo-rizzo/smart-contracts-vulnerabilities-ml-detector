@@ -9,10 +9,12 @@ PROJECT_ROOT="src/scripts"
 
 # Define the file types and subsets to iterate over
 file_types=("source" "runtime" "bytecode")
-subsets=("CodeSmells" "Zeus" "eThor" "ContractFuzzer" "SolidiFI" "EverEvolvingG" "Doublade" "NPChecker" "JiuZhou" "SBcurated" "SWCregistry" "EthRacer" "NotSoSmartC")
+# subsets=("CodeSmells" "Zeus" "eThor" "ContractFuzzer" "SolidiFI" "EverEvolvingG" "Doublade" "NPChecker" "JiuZhou" "SBcurated" "SWCregistry" "EthRacer" "NotSoSmartC")
+subsets=("CodeSmells" "Zeus" "ContractFuzzer" "SolidiFI" "EverEvolvingG" "Doublade" "NPChecker" "JiuZhou" "SBcurated" "SWCregistry" "EthRacer" "NotSoSmartC")
 
 # Define the scripts to run
-scripts=("ffnn.py" "lstm.py" "codebert.py" "ml_classifier.py")
+#scripts=("ffnn.py" "lstm.py" "codebert.py" "ml_classifiers.py")
+scripts=("ml_classifiers.py")
 
 # Export PYTHONPATH
 export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
@@ -24,7 +26,7 @@ for file_type in "${file_types[@]}"; do
         # Iterate over each script
         for script in "${scripts[@]}"; do
             echo "Running $script for file type: $file_type and subset: $subset"
-            python "$PROJECT_ROOT/$script" --file_type "$file_type" --subset "$subset"
+            python "$PROJECT_ROOT/$script" --file_type "$file_type" --subset "$subset" --num_folds 2
         done
     done
 done

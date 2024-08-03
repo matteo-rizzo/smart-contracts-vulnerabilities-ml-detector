@@ -1,10 +1,11 @@
 from typing import Dict
 
+import numpy as np
 import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset
 
+from src.classes.ClassBalancer import ClassBalancer
 from src.classes.CrossValidator import CrossValidator
 from src.classes.DataPreprocessor import DataPreprocessor
 from src.classes.FFNNClassifier import FFNNClassifier
@@ -43,16 +44,17 @@ def main(config: Dict):
     vectorizer = TfidfVectorizer(max_features=config["max_features"])
 
     # Convert the data to PyTorch tensors
-    x = torch.FloatTensor(vectorizer.fit_transform(inputs).toarray())
-    y = torch.FloatTensor(labels)
+    x = vectorizer.fit_transform(inputs).toarray()
+    y = np.array(labels)
 
-    # Split the data into training and test sets
+    # Split the data into training and test sets using ClassBalancer
     print("Splitting data into training and test sets...")
-    x_train, x_test, y_train, y_test = train_test_split(
+    x_train, x_test, y_train, y_test = ClassBalancer.train_test_split(
         x, y, test_size=config['test_size'], random_state=config['random_seed']
     )
-    train_data = TensorDataset(x_train, y_train)
-    test_data = TensorDataset(x_test, y_test)
+
+    train_data = TensorDataset(torch.tensor(x_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
+    test_data = TensorDataset(torch.tensor(x_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
 
     # Start cross-validation
     print("Starting cross-validation...")

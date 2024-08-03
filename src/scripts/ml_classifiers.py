@@ -19,7 +19,7 @@ CLASSIFIERS = {
     "gradient_boosting": GradientBoostingClassifier(n_estimators=100, learning_rate=0.01, max_depth=3),
     "logistic_regression": LogisticRegression(),
     "knn": KNeighborsClassifier(n_neighbors=5),
-    "xgboost": XGBClassifier(use_label_encoder=False, eval_metric='mlogloss')
+    "xgboost": XGBClassifier(eval_metric='mlogloss')
 }
 
 

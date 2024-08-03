@@ -7,8 +7,8 @@ from torch import optim, nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from src.classes.MetricsHandler import MetricsHandler
 from src.settings import DEVICE, LR
-from src.utility import compute_metrics
 
 
 class Trainer:
@@ -26,6 +26,9 @@ class Trainer:
         self._model = model.to(DEVICE)
         self._optimizer = optim.Adam(model.parameters(), lr=LR)
         self._loss_fn = nn.BCEWithLogitsLoss().to(DEVICE)
+
+    def set_class_weights(self, class_weights):
+        self._loss_fn = nn.BCEWithLogitsLoss(weight=class_weights).to(DEVICE)
 
     def reset_model(self):
         self._model = self.__untrained_model
@@ -53,7 +56,7 @@ class Trainer:
 
             # Make predictions and compute batch metrics
             predictions = torch.sigmoid(outputs).round().cpu().numpy()
-            batch_metrics = compute_metrics(labels.cpu().numpy(), predictions)
+            batch_metrics = MetricsHandler.compute_metrics(labels.cpu().numpy(), predictions)
 
         # Return the loss and metrics
         return loss.item(), batch_metrics
@@ -83,7 +86,7 @@ class Trainer:
 
         # Make predictions and compute metrics
         predictions = torch.sigmoid(outputs).round().detach().cpu().numpy()
-        batch_metrics = compute_metrics(labels.detach().cpu().numpy(), predictions)
+        batch_metrics = MetricsHandler.compute_metrics(labels.detach().cpu().numpy(), predictions)
 
         return loss.item(), batch_metrics
 

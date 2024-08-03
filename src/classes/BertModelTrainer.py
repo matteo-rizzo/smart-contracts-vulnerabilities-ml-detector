@@ -3,9 +3,9 @@ from typing import Tuple, Dict
 import torch
 from torch.optim import AdamW
 
+from src.classes.MetricsHandler import MetricsHandler
 from src.classes.Trainer import Trainer
 from src.settings import LR
-from src.utility import compute_metrics
 
 
 class BERTModelTrainer(Trainer):
@@ -44,7 +44,7 @@ class BERTModelTrainer(Trainer):
 
             # Make predictions and compute batch metrics
             predictions = torch.sigmoid(outputs.logits).round().cpu().numpy()
-            batch_metrics = compute_metrics(batch[2].cpu().numpy(), predictions)
+            batch_metrics = MetricsHandler.compute_metrics(batch[2].cpu().numpy(), predictions)
 
         # Return the loss and metrics
         return loss.item(), batch_metrics
@@ -74,6 +74,6 @@ class BERTModelTrainer(Trainer):
 
         # Make predictions and compute metrics
         predictions = torch.sigmoid(outputs.logits).round().detach().cpu().numpy()
-        batch_metrics = compute_metrics(batch[2].detach().cpu().numpy(), predictions)
+        batch_metrics = MetricsHandler.compute_metrics(batch[2].detach().cpu().numpy(), predictions)
 
         return loss.item(), batch_metrics

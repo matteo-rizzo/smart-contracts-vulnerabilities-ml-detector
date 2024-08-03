@@ -1,6 +1,14 @@
 import os
+import warnings
 
 import torch
+
+
+def warn(*args, **kwargs):
+    pass
+
+
+warnings.warn = warn
 
 """
 CGT Repo and Paper: <https://github.com/gsalzer/cgt?tab=readme-ov-file>
@@ -34,8 +42,8 @@ LABELS = {
     "Doublade": 5,
     "NPChecker": 5,
     "JiuZhou": 53,
-    "SBcurated": 10,
-    "SWCregistry": 22,
+    "SBcurated": 16,
+    "SWCregistry": 33,
     "EthRacer": 2,
     "NotSoSmartC": 18
 }
@@ -49,8 +57,8 @@ RANDOM_SEED = 0
 PATH_TO_DATASET = os.path.join("dataset", "cgt")
 MAX_FEATURES = 256
 BATCH_SIZE = 1
-NUM_FOLDS = 2
-NUM_EPOCHS = 2
+NUM_FOLDS = 10
+NUM_EPOCHS = 5
 LR = 0.001
 TEST_SIZE = 0.1
 FILE_TYPE = "source"

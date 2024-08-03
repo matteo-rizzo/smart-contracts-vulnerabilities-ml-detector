@@ -2,42 +2,11 @@ import argparse
 import os
 import random
 from argparse import ArgumentParser
-from typing import List, Any, Dict
 
 import numpy as np
-import pandas as pd
 import torch
-from sklearn.metrics import precision_score, recall_score, f1_score
 
 from src.settings import LABELS, SUBSET, FILE_TYPE, RANDOM_SEED, PATH_TO_DATASET, NUM_FOLDS, TEST_SIZE
-
-
-def compute_metrics(true_labels: List[Any], pred_labels: List[Any]) -> Dict[str, float]:
-    """
-    Compute evaluation metrics for the given true and predicted labels.
-
-    :param true_labels: The ground truth labels.
-    :param pred_labels: The predicted labels.
-    :return: A dictionary containing precision, recall, and F1 score.
-    """
-    return {
-        "precision": precision_score(true_labels, pred_labels, average='samples', zero_division=0),
-        "recall": recall_score(true_labels, pred_labels, average='samples', zero_division=0),
-        "f1": f1_score(true_labels, pred_labels, average='samples', zero_division=0)
-    }
-
-
-def save_results(results: List[Dict[str, Any]], filename: str, log_dir: str) -> None:
-    """
-    Save the results to a CSV file.
-
-    :param log_dir: The logging directory.
-    :param results: The results to save, typically a list of dictionaries.
-    :param filename: The name of the file to save the results to.
-    """
-    df = pd.DataFrame(results)
-    df.to_csv(os.path.join(log_dir, filename), index=False)
-    print(f"All fold results saved to '{os.path.join(log_dir, filename)}'")
 
 
 def make_reproducible(random_seed: int):
