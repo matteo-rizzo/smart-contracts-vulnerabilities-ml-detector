@@ -6,7 +6,11 @@ pandas~=2.2.2
 scikit-learn==1.5.1
 networkx
 torch-geometric
-tqdm==4.66.4
-transformers==4.43.2
-xgboost
-matplotlib
+tqdm==4.66.5
+transformers==4.43.4
+xgboost==2.1.1
+matplotlib==3.9.0
+scipy==1.14.0
+iterative-stratification
+pyetherchain~=0.3.2
+evmdasm~=0.1.10

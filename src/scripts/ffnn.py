@@ -2,50 +2,39 @@ from typing import Dict
 
 import numpy as np
 import torch
-from sklearn.feature_extraction.text import TfidfVectorizer
 from torch.utils.data import TensorDataset
 
 from src.classes.ClassBalancer import ClassBalancer
 from src.classes.CrossValidator import CrossValidator
 from src.classes.DataPreprocessor import DataPreprocessor
 from src.classes.FFNNClassifier import FFNNClassifier
+from src.classes.MultimodalVectorizer import MultimodalVectorizer
 from src.classes.Trainer import Trainer
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, MAX_FEATURES
-from src.utility import make_reproducible, get_file_ext, get_num_labels, init_arg_parser, make_log_dir, get_file_id
+from src.utility import make_reproducible, get_num_labels, init_arg_parser, make_log_dir
+
+MULTIMODAL = True
+MULTIMODAL_FILE_TYPES = ["source", "bytecode"]
 
 
 def main(config: Dict):
-    # Initialize the DataPreprocessor
-    print("Initializing DataPreprocessor...")
     preprocessor = DataPreprocessor(
-        file_type=config['file_type'],
         path_to_dataset=config['path_to_dataset'],
-        file_ext=config['file_ext'],
-        file_id=config['file_id'],
-        num_labels=config['num_labels'],
+        file_types=MULTIMODAL_FILE_TYPES if config["multimodal"] else [config['file_type']],
         subset=config['subset']
     )
-
-    # Load and process the data
     print("Loading and processing data...")
     preprocessor.load_and_process_data()
 
-    # Access processed data
-    print("Accessing processed data...")
-    inputs = preprocessor.get_inputs()
-    labels = preprocessor.get_labels()
+    vectorizer = MultimodalVectorizer(max_features=config["max_features"], multimodal=config["multimodal"])
 
-    # Initialize the FFNNClassifier
-    print("Initializing the FFNNClassifier...")
-    model = FFNNClassifier(input_size=config["max_features"], output_size=config["num_labels"])
+    print("Transforming input documents into TF-IDF features...")
+    x = vectorizer.transform_inputs(preprocessor.get_inputs())
+    print(f"TF-IDF feature matrix shape: {x.shape}")
 
-    # Initialize the TF-IDF vectorizer
-    print("Initializing the TF-IDF vectorizer...")
-    vectorizer = TfidfVectorizer(max_features=config["max_features"])
-
-    # Convert the data to PyTorch tensors
-    x = vectorizer.fit_transform(inputs).toarray()
-    y = np.array(labels)
+    print("Converting labels to numpy array...")
+    y = np.array(preprocessor.get_labels())
+    print(f"Labels shape: {y.shape}")
 
     # Split the data into training and test sets using ClassBalancer
     print("Splitting data into training and test sets...")
@@ -56,12 +45,15 @@ def main(config: Dict):
     train_data = TensorDataset(torch.tensor(x_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
     test_data = TensorDataset(torch.tensor(x_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
 
+    # Initialize the FFNNClassifier
+    print("Initializing the FFNNClassifier...")
+    input_size = len(MULTIMODAL_FILE_TYPES) * config["max_features"] if config["multimodal"] else config["max_features"]
+    model = FFNNClassifier(input_size=input_size, output_size=config["num_labels"])
+
     # Start cross-validation
     print("Starting cross-validation...")
     cross_validator = CrossValidator(
-        Trainer(model),
-        train_data,
-        test_data,
+        Trainer(model), train_data, test_data,
         num_epochs=config['num_epochs'],
         num_folds=config['num_folds'],
         batch_size=config['batch_size']
@@ -78,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE, help="Batch size")
     parser.add_argument("--num_epochs", type=int, default=NUM_EPOCHS, help="Number of epochs")
     parser.add_argument("--learning_rate", type=float, default=LR, help="Learning rate")
+    parser.add_argument("--multimodal", type=bool, default=MULTIMODAL, help="Process multiple modalities at once")
 
     # Parse command-line arguments
     args = parser.parse_args()
@@ -86,17 +79,12 @@ if __name__ == '__main__':
     # Ensure reproducibility by setting the random seed
     make_reproducible(config["random_seed"])
 
-    # Get the file extension based on the file type
-    config["file_ext"] = get_file_ext(config["file_type"])
-
-    # Get the file ID based on the file type
-    config["file_id"] = get_file_id(config["file_type"])
-
     # Get the number of labels based on the subset of data to consider
     config["num_labels"] = get_num_labels(config["subset"])
 
     # Create the logging directory
-    config["log_dir"] = make_log_dir(experiment_id=f"{config['subset']}_{config['file_type']}")
+    experiment_id = f"{config['subset']}_{'multimodal' if config['multimodal'] else config['file_type']}"
+    config["log_dir"] = make_log_dir(experiment_id)
 
     # Print all configurations for verification
     print("Configuration:")

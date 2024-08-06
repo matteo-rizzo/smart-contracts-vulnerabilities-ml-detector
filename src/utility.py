@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 from argparse import ArgumentParser
+from typing import Dict
 
 import numpy as np
 import torch
@@ -19,6 +20,14 @@ def make_reproducible(random_seed: int):
     np.random.seed(random_seed)
     random.seed(random_seed)
     torch.backends.cudnn.benchmark = False
+
+
+def get_file_config(file_type: str) -> Dict:
+    return {
+        "type": file_type,
+        "id": get_file_id(file_type),
+        "ext": get_file_ext(file_type)
+    }
 
 
 def get_file_ext(file_type: str) -> str:

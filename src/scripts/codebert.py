@@ -10,19 +10,17 @@ from src.classes.ClassBalancer import ClassBalancer
 from src.classes.CrossValidator import CrossValidator
 from src.classes.DataPreprocessor import DataPreprocessor
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, DEVICE
-from src.utility import make_reproducible, get_file_ext, get_num_labels, init_arg_parser, make_log_dir, get_file_id
+from src.utility import make_reproducible, get_num_labels, init_arg_parser, make_log_dir
 
 BERT_MODEL_TYPE = 'microsoft/codebert-base'
 
 
 def main(config: Dict):
+    # Initialize the DataPreprocessor
     print("Initializing DataPreprocessor...")
     preprocessor = DataPreprocessor(
-        file_type=config['file_type'],
         path_to_dataset=config['path_to_dataset'],
-        file_ext=config['file_ext'],
-        file_id=config['file_id'],
-        num_labels=config['num_labels'],
+        file_types=[config['file_type']],
         subset=config['subset']
     )
 
@@ -73,16 +71,14 @@ def main(config: Dict):
 
     print("Initializing CrossValidator...")
     cross_validator = CrossValidator(
-        trainer=BERTModelTrainer(model),
-        train_data=train_data,
-        test_data=test_data,
+        BERTModelTrainer(model), train_data, test_data,
         num_epochs=config['num_epochs'],
         num_folds=config['num_folds'],
         batch_size=config['batch_size']
     )
 
     print("Starting k-fold cross-validation...")
-    cross_validator.k_fold_cv(log_id="bert")
+    cross_validator.k_fold_cv(log_id="bert", log_dir=config["log_dir"])
 
 
 if __name__ == '__main__':
@@ -98,12 +94,6 @@ if __name__ == '__main__':
 
     # Ensure reproducibility by setting the random seed
     make_reproducible(config["random_seed"])
-
-    # Get the file extension based on the file type
-    config["file_ext"] = get_file_ext(config["file_type"])
-
-    # Get the file ID based on the file type
-    config["file_id"] = get_file_id(config["file_type"])
 
     # Get the num_labels based on the subset of data to consider
     config["num_labels"] = get_num_labels(config["subset"])

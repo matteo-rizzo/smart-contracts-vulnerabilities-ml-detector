@@ -11,7 +11,7 @@ from src.classes.EmbeddingProcessor import EmbeddingProcessor
 from src.classes.LSTMClassifier import LSTMClassifier
 from src.classes.Trainer import Trainer
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR
-from src.utility import make_reproducible, get_file_ext, get_num_labels, init_arg_parser, get_file_id, make_log_dir
+from src.utility import make_reproducible, get_num_labels, init_arg_parser, make_log_dir
 
 PATH_TO_GLOVE = os.path.join("asset", "glove.6B.100d.txt")
 
@@ -20,11 +20,8 @@ def main(config: Dict):
     # Initialize the DataPreprocessor
     print("Initializing DataPreprocessor...")
     preprocessor = DataPreprocessor(
-        file_type=config['file_type'],
         path_to_dataset=config['path_to_dataset'],
-        file_ext=config['file_ext'],
-        file_id=config['file_id'],
-        num_labels=config['num_labels'],
+        file_types=[config['file_type']],
         subset=config['subset']
     )
 
@@ -70,9 +67,7 @@ def main(config: Dict):
     # Start cross-validation
     print("Starting cross-validation...")
     cross_validator = CrossValidator(
-        Trainer(model),
-        train_data,
-        test_data,
+        Trainer(model), train_data, test_data,
         num_epochs=config['num_epochs'],
         num_folds=config['num_folds'],
         batch_size=config['batch_size']
@@ -95,12 +90,6 @@ if __name__ == '__main__':
 
     # Ensure reproducibility by setting the random seed
     make_reproducible(config["random_seed"])
-
-    # Get the file extension based on the file type
-    config["file_ext"] = get_file_ext(config["file_type"])
-
-    # Get the file ID based on the file type
-    config["file_id"] = get_file_id(config["file_type"])
 
     # Get the number of labels based on the subset of data to consider
     config["num_labels"] = get_num_labels(config["subset"])
