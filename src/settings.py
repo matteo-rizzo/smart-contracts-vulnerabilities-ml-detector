@@ -44,5 +44,5 @@ NUM_FOLDS = 10
 NUM_EPOCHS = 50
 LR = 0.0001
 TEST_SIZE = 0.1
-FILE_TYPE = "source"
+FILE_TYPE = "ast"
 SUBSET = "CodeSmells"

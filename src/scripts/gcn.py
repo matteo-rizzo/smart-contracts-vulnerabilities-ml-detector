@@ -43,7 +43,7 @@ def main(config: Dict):
     )
 
     print("Creating GraphDataset objects for training and testing...")
-    train_dataset = GraphDataset(x_train)
+    train_dataset = GraphDataset(x_train, augment=True)
     test_dataset = GraphDataset(x_test)
 
     print("Initializing CrossValidator...")

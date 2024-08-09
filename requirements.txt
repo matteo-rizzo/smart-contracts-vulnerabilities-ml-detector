@@ -7,9 +7,9 @@ scikit-learn==1.5.1
 networkx
 torch-geometric
 tqdm==4.66.5
-transformers==4.43.4
+transformers==4.44.0
 xgboost==2.1.1
-matplotlib==3.9.0
+matplotlib==3.9.1.post1
 scipy==1.14.0
 iterative-stratification
 pyetherchain~=0.3.2
