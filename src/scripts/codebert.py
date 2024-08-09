@@ -5,12 +5,12 @@ import torch
 from torch.utils.data import TensorDataset
 from transformers import RobertaForSequenceClassification, RobertaTokenizer
 
-from src.classes.BertModelTrainer import BERTModelTrainer
-from src.classes.ClassBalancer import ClassBalancer
-from src.classes.CrossValidator import CrossValidator
-from src.classes.DataPreprocessor import DataPreprocessor
+from src.classes.data.DataPreprocessor import DataPreprocessor
+from src.classes.training.BertModelTrainer import BERTModelTrainer
+from src.classes.training.ClassBalancer import ClassBalancer
+from src.classes.training.CrossValidator import CrossValidator
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, DEVICE
-from src.utility import make_reproducible, get_num_labels, init_arg_parser, make_log_dir
+from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
 BERT_MODEL_TYPE = 'microsoft/codebert-base'
 
@@ -30,15 +30,6 @@ def main(config: Dict):
     print("Accessing processed data...")
     inputs = preprocessor.get_inputs()
     labels = preprocessor.get_labels()
-
-    print("Initializing RobertaForSequenceClassification model...")
-    model = RobertaForSequenceClassification.from_pretrained(
-        config['bert_model_type'],
-        num_labels=config['num_labels'],
-        ignore_mismatched_sizes=True
-    )
-    model.config.problem_type = "multi_label_classification"
-    model.to(DEVICE)
 
     print("Initializing RobertaTokenizer...")
     tokenizer = RobertaTokenizer.from_pretrained(config['bert_model_type'], ignore_mismatched_sizes=True)
@@ -69,6 +60,15 @@ def main(config: Dict):
     train_data = TensorDataset(x_train, train_masks, torch.tensor(y_train).float())
     test_data = TensorDataset(x_test, test_masks, torch.tensor(y_test).float())
 
+    print("Initializing RobertaForSequenceClassification model...")
+    model = RobertaForSequenceClassification.from_pretrained(
+        config['bert_model_type'],
+        num_labels=preprocessor.get_num_labels(),
+        ignore_mismatched_sizes=True
+    )
+    model.config.problem_type = "multi_label_classification"
+    model.to(DEVICE)
+
     print("Initializing CrossValidator...")
     cross_validator = CrossValidator(
         BERTModelTrainer(model), train_data, test_data,
@@ -94,9 +94,6 @@ if __name__ == '__main__':
 
     # Ensure reproducibility by setting the random seed
     make_reproducible(config["random_seed"])
-
-    # Get the num_labels based on the subset of data to consider
-    config["num_labels"] = get_num_labels(config["subset"])
 
     # Create the logging directory
     config["log_dir"] = make_log_dir(experiment_id=f"{config['subset']}_{config['file_type']}")

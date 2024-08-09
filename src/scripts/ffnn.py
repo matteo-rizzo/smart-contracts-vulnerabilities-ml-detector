@@ -4,14 +4,14 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset
 
-from src.classes.ClassBalancer import ClassBalancer
-from src.classes.CrossValidator import CrossValidator
-from src.classes.DataPreprocessor import DataPreprocessor
-from src.classes.FFNNClassifier import FFNNClassifier
-from src.classes.MultimodalVectorizer import MultimodalVectorizer
-from src.classes.Trainer import Trainer
+from src.classes.classifiers.FFNNClassifier import FFNNClassifier
+from src.classes.data.DataPreprocessor import DataPreprocessor
+from src.classes.data.MultimodalVectorizer import MultimodalVectorizer
+from src.classes.training.ClassBalancer import ClassBalancer
+from src.classes.training.CrossValidator import CrossValidator
+from src.classes.training.Trainer import Trainer
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, MAX_FEATURES
-from src.utility import make_reproducible, get_num_labels, init_arg_parser, make_log_dir
+from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
 MULTIMODAL = True
 MULTIMODAL_FILE_TYPES = ["source", "bytecode"]
@@ -48,7 +48,7 @@ def main(config: Dict):
     # Initialize the FFNNClassifier
     print("Initializing the FFNNClassifier...")
     input_size = len(MULTIMODAL_FILE_TYPES) * config["max_features"] if config["multimodal"] else config["max_features"]
-    model = FFNNClassifier(input_size=input_size, output_size=config["num_labels"])
+    model = FFNNClassifier(input_size=input_size, output_size=preprocessor.get_num_labels())
 
     # Start cross-validation
     print("Starting cross-validation...")
@@ -78,9 +78,6 @@ if __name__ == '__main__':
 
     # Ensure reproducibility by setting the random seed
     make_reproducible(config["random_seed"])
-
-    # Get the number of labels based on the subset of data to consider
-    config["num_labels"] = get_num_labels(config["subset"])
 
     # Create the logging directory
     experiment_id = f"{config['subset']}_{'multimodal' if config['multimodal'] else config['file_type']}"

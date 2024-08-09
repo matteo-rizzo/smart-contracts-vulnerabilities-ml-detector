@@ -4,14 +4,14 @@ from typing import Dict
 import torch
 from torch.utils.data import TensorDataset
 
-from src.classes.ClassBalancer import ClassBalancer
-from src.classes.CrossValidator import CrossValidator
-from src.classes.DataPreprocessor import DataPreprocessor
-from src.classes.EmbeddingProcessor import EmbeddingProcessor
-from src.classes.LSTMClassifier import LSTMClassifier
-from src.classes.Trainer import Trainer
+from src.classes.classifiers.LSTMClassifier import LSTMClassifier
+from src.classes.data.DataPreprocessor import DataPreprocessor
+from src.classes.data.WordEmbeddingProcessor import WordEmbeddingProcessor
+from src.classes.training.ClassBalancer import ClassBalancer
+from src.classes.training.CrossValidator import CrossValidator
+from src.classes.training.Trainer import Trainer
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR
-from src.utility import make_reproducible, get_num_labels, init_arg_parser, make_log_dir
+from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
 PATH_TO_GLOVE = os.path.join("asset", "glove.6B.100d.txt")
 
@@ -34,22 +34,12 @@ def main(config: Dict):
     inputs = preprocessor.get_inputs()
     labels = preprocessor.get_labels()
 
-    # Initialize the EmbeddingProcessor with GloVe embeddings
-    print("Initializing EmbeddingProcessor...")
-    embedding_processor = EmbeddingProcessor(glove_file=config['path_to_glove'], embedding_dim=100)
+    # Initialize the WordEmbeddingProcessor with GloVe embeddings
+    print("Initializing WordEmbeddingProcessor...")
+    embedding_processor = WordEmbeddingProcessor(glove_file=config['path_to_glove'], embedding_dim=100)
     vocab_len, embed_dim, embed_matrix = embedding_processor.process_embeddings(inputs)
     sequences = embedding_processor.text_to_sequences(inputs)
     seq_padded = embedding_processor.pad_sequences(sequences)
-
-    # Initialize the LSTMClassifier
-    print("Initializing LSTMClassifier...")
-    model = LSTMClassifier(
-        vocab_size=vocab_len,
-        embedding_dim=embed_dim,
-        hidden_dim=128,
-        pretrained_embeddings=embed_matrix,
-        output_size=config["num_labels"]
-    )
 
     # Convert the data to PyTorch tensors
     x = torch.FloatTensor(seq_padded)
@@ -61,8 +51,18 @@ def main(config: Dict):
         x, y, test_size=config['test_size'], random_state=config['random_seed']
     )
 
-    train_data = TensorDataset(x_train, y_train)
-    test_data = TensorDataset(x_test, y_test)
+    train_data = TensorDataset(torch.tensor(x_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32))
+    test_data = TensorDataset(torch.tensor(x_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
+
+    # Initialize the LSTMClassifier
+    print("Initializing LSTMClassifier...")
+    model = LSTMClassifier(
+        vocab_size=vocab_len,
+        embedding_dim=embed_dim,
+        hidden_dim=128,
+        pretrained_embeddings=embed_matrix,
+        output_size=preprocessor.get_num_labels()
+    )
 
     # Start cross-validation
     print("Starting cross-validation...")
@@ -90,9 +90,6 @@ if __name__ == '__main__':
 
     # Ensure reproducibility by setting the random seed
     make_reproducible(config["random_seed"])
-
-    # Get the number of labels based on the subset of data to consider
-    config["num_labels"] = get_num_labels(config["subset"])
 
     # Create the logging directory
     config["log_dir"] = make_log_dir(experiment_id=f"{config['subset']}_{config['file_type']}")

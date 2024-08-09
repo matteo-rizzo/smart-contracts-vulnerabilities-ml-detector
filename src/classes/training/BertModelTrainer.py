@@ -3,8 +3,8 @@ from typing import Tuple, Dict
 import torch
 from torch.optim import AdamW
 
-from src.classes.MetricsHandler import MetricsHandler
-from src.classes.Trainer import Trainer
+from src.classes.training.MetricsHandler import MetricsHandler
+from src.classes.training.Trainer import Trainer
 from src.settings import LR
 
 

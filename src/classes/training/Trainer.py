@@ -7,7 +7,7 @@ from torch import optim, nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from src.classes.MetricsHandler import MetricsHandler
+from src.classes.training.MetricsHandler import MetricsHandler
 from src.settings import DEVICE, LR
 
 

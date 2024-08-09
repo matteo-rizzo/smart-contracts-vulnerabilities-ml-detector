@@ -1,19 +1,22 @@
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Union
 
 import numpy as np
 from numpy import floating
 from sklearn.model_selection import KFold
-from torch.utils.data import TensorDataset, DataLoader, Subset
+from torch.utils.data import DataLoader, Subset, Dataset
+from torch_geometric.loader import DataLoader as GeometricDataLoader
 
-from src.classes.ClassBalancer import ClassBalancer
-from src.classes.MetricsHandler import MetricsHandler
-from src.classes.Trainer import Trainer
+from src.classes.data.GraphDataset import GraphDataset
+from src.classes.training.ClassBalancer import ClassBalancer
+from src.classes.training.MetricsHandler import MetricsHandler
+from src.classes.training.Trainer import Trainer
 
 
 class CrossValidator:
 
-    def __init__(self, trainer: Trainer, train_data: TensorDataset, test_data: TensorDataset, num_epochs: int,
-                 num_folds: int, batch_size: int):
+    def __init__(self, trainer: Trainer, train_data: Union[Dataset, GraphDataset],
+                 test_data: Union[Dataset, GraphDataset],
+                 num_epochs: int, num_folds: int, batch_size: int):
         """
         Initialize the CrossValidator with trainer, training data, test data, and configuration parameters.
 
@@ -30,6 +33,24 @@ class CrossValidator:
         self.__num_epochs = num_epochs
         self.__num_folds = num_folds
         self.__batch_size = batch_size
+
+        # Determine if the dataset is a GraphDataset
+        self.is_graph_dataset = isinstance(self.__train_data, GraphDataset)
+
+    def __get_dataloader(self, dataset: Union[Dataset, GraphDataset], shuffle: bool = False,
+                         sampler=None) -> DataLoader:
+        """
+        Returns the appropriate DataLoader based on the dataset type.
+
+        :param dataset: The dataset for which to create the DataLoader.
+        :param shuffle: Whether to shuffle the data.
+        :param sampler: Sampler for data sampling.
+        :return: A DataLoader instance.
+        """
+        if self.is_graph_dataset:
+            return GeometricDataLoader(dataset, batch_size=self.__batch_size, shuffle=shuffle, sampler=sampler)
+        else:
+            return DataLoader(dataset, batch_size=self.__batch_size, shuffle=shuffle, sampler=sampler)
 
     def __train_and_evaluate(self, train_dataloader: DataLoader, test_dataloader: DataLoader) -> Dict[str, List[float]]:
         """
@@ -80,7 +101,7 @@ class CrossValidator:
 
         return avg_test_metrics
 
-    def k_fold_cv(self, log_id: str = "bert", log_dir: str = "") -> None:
+    def k_fold_cv(self, log_id: str = "", log_dir: str = "", use_class_weights: bool = True) -> None:
         """
         Perform k-fold cross-validation.
 
@@ -97,18 +118,13 @@ class CrossValidator:
             val_subsampler = Subset(self.__train_data, val_idx)
 
             # Calculate class weights and set them in the trainer
-            class_weights = ClassBalancer.calculate_class_weights(train_subsampler)
-            self.__trainer.set_class_weights(class_weights)
+            if use_class_weights:
+                class_weights = ClassBalancer.calculate_class_weights(train_subsampler)
+                self.__trainer.set_class_weights(class_weights)
 
-            train_loader = DataLoader(
-                train_subsampler,
-                sampler=ClassBalancer.make_balanced_sampler(train_subsampler),
-                batch_size=self.__batch_size
-            )
-            val_loader = DataLoader(
-                val_subsampler,
-                batch_size=self.__batch_size  # No need for shuffling
-            )
+            train_loader = self.__get_dataloader(train_subsampler,
+                                                 sampler=ClassBalancer.make_balanced_sampler(train_subsampler))
+            val_loader = self.__get_dataloader(val_subsampler)
 
             print(f"Starting Fold {fold + 1}/{self.__num_folds}")
 
@@ -119,8 +135,8 @@ class CrossValidator:
             MetricsHandler.plot_metrics(history, fold, self.__num_epochs, log_id, log_dir)
 
             # Evaluate on the test set after each fold
-            metrics = self.__evaluate_on_test_set(
-                DataLoader(self.__test_data, batch_size=self.__batch_size, shuffle=False))
+            test_loader = self.__get_dataloader(self.__test_data)
+            metrics = self.__evaluate_on_test_set(test_loader)
             fold_metrics.append(metrics)
 
             # Reset the model to untrained

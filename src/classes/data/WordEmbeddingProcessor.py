@@ -5,10 +5,10 @@ import numpy as np
 from tqdm import tqdm
 
 
-class EmbeddingProcessor:
+class WordEmbeddingProcessor:
     def __init__(self, glove_file: str, embedding_dim: int):
         """
-        Initialize the EmbeddingProcessor with necessary configurations.
+        Initialize the WordEmbeddingProcessor with necessary configurations.
 
         :param glove_file: Path to the GloVe embeddings file.
         :param embedding_dim: Dimensionality of GloVe embeddings used.

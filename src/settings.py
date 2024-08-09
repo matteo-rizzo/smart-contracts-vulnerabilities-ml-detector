@@ -31,23 +31,6 @@ CGT Repo and Paper: <https://github.com/gsalzer/cgt?tab=readme-ov-file>
 
 """
 
-# Labels for the dataset
-LABELS = {
-    "CodeSmells": 20,
-    "Zeus": 7,
-    "eThor": 1,
-    "ContractFuzzer": 7,
-    "SolidiFI": 7,
-    "EverEvolvingG": 5,
-    "Doublade": 5,
-    "NPChecker": 5,
-    "JiuZhou": 53,
-    "SBcurated": 16,
-    "SWCregistry": 33,
-    "EthRacer": 2,
-    "NotSoSmartC": 18
-}
-
 # Set the device for torch (use GPU if available)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Running on device {DEVICE}")

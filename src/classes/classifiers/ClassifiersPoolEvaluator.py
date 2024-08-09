@@ -5,8 +5,8 @@ import pandas as pd
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 from sklearn.multiclass import OneVsRestClassifier
 
-from src.classes.ClassBalancer import ClassBalancer
-from src.classes.MetricsHandler import MetricsHandler
+from src.classes.training.ClassBalancer import ClassBalancer
+from src.classes.training.MetricsHandler import MetricsHandler
 
 
 class ClassifiersPoolEvaluator:

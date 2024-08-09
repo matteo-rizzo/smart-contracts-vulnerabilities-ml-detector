@@ -2,6 +2,7 @@ import os
 from typing import Dict, List, Any
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
@@ -70,8 +71,18 @@ class MetricsHandler:
 
         :param true_labels: The ground truth labels.
         :param pred_labels: The predicted labels.
-        :return: A dictionary containing precision, recall, F1 score, ROC AUC, and accuracy.
+        :return: A dictionary containing precision, recall, F1 score, and accuracy.
         """
+        # Convert true_labels and pred_labels to numpy arrays if they are not already
+        true_labels = np.array(true_labels)
+        pred_labels = np.array(pred_labels)
+
+        # Ensure the labels are in the correct shape
+        if true_labels.ndim == 1:
+            true_labels = true_labels.reshape(-1, 1)
+        if pred_labels.ndim == 1:
+            pred_labels = pred_labels.reshape(-1, 1)
+
         return {
             "accuracy": accuracy_score(true_labels, pred_labels),
             "precision": precision_score(true_labels, pred_labels, average='samples', zero_division=0),
