@@ -44,12 +44,12 @@ class DataPreprocessor:
         :rtype: bool
         """
         labels = self.label_initializer.initialize_labels(group)
-        file_contents_or_ast_data = self.content_processor.process_file_contents(group, self.file_types, labels)
+        file_contents_or_graph_data = self.content_processor.process_file_contents(group, self.file_types, labels)
 
-        if not file_contents_or_ast_data:
+        if not file_contents_or_graph_data:
             return False
 
-        self.data_handler.add_data(item_id, file_contents_or_ast_data, labels)
+        self.data_handler.add_data(item_id, file_contents_or_graph_data, labels)
         return True
 
     def _filter_and_preprocess_data(self, data: pd.DataFrame) -> Union[pd.DataFrame, List[Data]]:
@@ -58,7 +58,7 @@ class DataPreprocessor:
 
         :param data: DataFrame containing the dataset to preprocess.
         :type data: pd.DataFrame
-        :return: Filtered and processed data or AST data.
+        :return: Filtered and processed data or Graph data.
         :rtype: Union[pd.DataFrame, List[Data]]
         """
         data = self._drop_na_rows(data)
@@ -74,8 +74,8 @@ class DataPreprocessor:
                 print(f"Error processing item_id {item_id}: {e}")
                 raise
 
-        if len(self.file_types) == 1 and self.file_types[0] == "ast":
-            return self.data_handler.get_inputs()["ast"]
+        if len(self.file_types) == 1 and self.file_types[0] in ["ast", "cfg"]:
+            return self.data_handler.get_inputs()[self.file_types[0]]
 
         return pd.concat(valid_rows, ignore_index=True)
 

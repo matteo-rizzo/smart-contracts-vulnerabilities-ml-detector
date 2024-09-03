@@ -2,7 +2,7 @@ from typing import List, Any
 
 from torch_geometric.data import Data, Dataset
 
-from src.classes.data.ASTAugmentor import ASTAugmentor
+from src.classes.data.graphs.GraphAugmentor import GraphAugmentor
 
 
 class GraphDataset(Dataset):
@@ -23,7 +23,7 @@ class GraphDataset(Dataset):
         self.num_augmentations = num_augmentations
 
         if self.augment:
-            self.augmentor = ASTAugmentor()
+            self.augmentor = GraphAugmentor()
             self.graphs = self._augment_graphs()
 
     def _augment_graphs(self) -> List[Any]:
@@ -33,7 +33,7 @@ class GraphDataset(Dataset):
         :return: A list of augmented graph data objects.
         :rtype: List[Any]
         """
-        return self.augmentor.generate_augmented_asts(self.graphs, self.num_augmentations)
+        return self.augmentor.generate_augmented_graphs(self.graphs, self.num_augmentations)
 
     def __len__(self) -> int:
         """

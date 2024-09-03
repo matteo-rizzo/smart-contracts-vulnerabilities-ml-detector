@@ -44,5 +44,5 @@ NUM_FOLDS = 10
 NUM_EPOCHS = 100
 LR = 0.00001
 TEST_SIZE = 0.1
-FILE_TYPE = "ast"
+FILE_TYPE = "cfg"
 SUBSET = "CodeSmells"

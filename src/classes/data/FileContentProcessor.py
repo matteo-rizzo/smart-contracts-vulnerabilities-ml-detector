@@ -28,18 +28,22 @@ class FileContentProcessor:
         :type file_types: List[str]
         :param labels: List of labels associated with the files.
         :type labels: List[int]
-        :return: Processed file contents or AST data, or False if processing fails.
+        :return: Processed file contents, AST data, CFG data, or False if processing fails.
         :rtype: Union[Dict[str, str], List[Data], bool]
         """
         file_contents = {}
-        ast_data = []
+        graph_data = []
+
         for file_type in file_types:
             file_content = self.__file_loader.get_file_content(group, file_type)
             if not file_content:
                 return False
+
             processed_content = self.__file_loader.preprocess(file_content, file_type, labels)
-            if file_type == "ast":
-                ast_data.append(processed_content)
+
+            if file_type in ["ast", "cfg"]:
+                graph_data.append(processed_content)
             else:
                 file_contents[file_type] = processed_content
-        return ast_data if ast_data else file_contents
+
+        return graph_data if graph_data else file_contents

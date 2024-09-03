@@ -23,28 +23,28 @@ class DataHandler:
 
         :param item_id: Unique identifier for the item.
         :type item_id: str
-        :param file_contents: Processed file contents or AST data.
+        :param file_contents: Processed file contents, AST data, or CFG data.
         :type file_contents: Union[Dict[str, str], List[Data]]
         :param labels: List of labels associated with the item.
         :type labels: List[int]
         """
-        if isinstance(file_contents, list):
-            self.__add_ast_data(file_contents, labels)
+        if isinstance(file_contents, list) and isinstance(file_contents[0], Data):
+            self.__add_graph_data(file_contents, labels)
         else:
             self.__add_file_contents(file_contents, labels)
             self.__item_ids.append(item_id)
 
-    def __add_ast_data(self, ast_data: List[Data], labels: List[int]):
+    def __add_graph_data(self, graph_data: List[Data], labels: List[int]):
         """
-        Adds AST data to the storage.
+        Adds graph data (e.g., AST or CFG) to the storage.
 
-        :param ast_data: List of AST data.
-        :type ast_data: List[Data]
-        :param labels: List of labels associated with the AST data.
+        :param graph_data: List of graph data (AST or CFG).
+        :type graph_data: List[Data]
+        :param labels: List of labels associated with the graph data.
         :type labels: List[int]
         """
         labels_tensor = torch.tensor(labels, dtype=torch.float)
-        for data in ast_data:
+        for data in graph_data:
             num_nodes = data.num_nodes
 
             # Pre-allocate the repeated_labels tensor
@@ -54,7 +54,10 @@ class DataHandler:
                 raise ValueError(f"Label shape mismatch: expected {num_nodes}, got {repeated_labels.shape[0]}")
 
             data.y = repeated_labels
-            self.__inputs["ast"].append(data)
+
+            # Determine if the graph is an AST or CFG based on the file type
+            graph_type = "ast" if "ast" in self.__inputs else "cfg"
+            self.__inputs[graph_type].append(data)
             self.__labels.append(labels)
 
     def __add_file_contents(self, file_contents: Dict[str, str], labels: List[int]):

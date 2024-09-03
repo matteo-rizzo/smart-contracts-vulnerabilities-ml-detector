@@ -6,7 +6,7 @@ from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, Subset, Dataset
 from torch_geometric.loader import DataLoader as GeometricDataLoader
 
-from src.classes.data.GraphDataset import GraphDataset
+from src.classes.data.graphs.GraphDataset import GraphDataset
 from src.classes.training.ClassBalancer import ClassBalancer
 from src.classes.training.MetricsHandler import MetricsHandler
 from src.classes.training.Trainer import Trainer

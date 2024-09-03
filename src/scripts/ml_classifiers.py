@@ -58,7 +58,7 @@ def main(config: Dict):
     preprocessor.load_and_process_data()
     x, y = preprocessor.get_inputs(), preprocessor.get_labels()
 
-    if config['file_type'] == "ast":
+    if config['file_type'] in ["ast", "cfg"]:
         evaluator = GraphClassifiersPoolEvaluator(
             inputs=x, labels=y,
             classifiers=initialize_classifiers(config['random_seed']),

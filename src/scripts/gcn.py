@@ -2,7 +2,7 @@ from typing import Dict
 
 from src.classes.classifiers.GCNClassifier import GCNClassifier
 from src.classes.data.DataPreprocessor import DataPreprocessor
-from src.classes.data.GraphDataset import GraphDataset
+from src.classes.data.graphs.GraphDataset import GraphDataset
 from src.classes.training.ClassBalancer import ClassBalancer
 from src.classes.training.CrossValidator import CrossValidator
 from src.classes.training.GCNTrainer import GCNTrainer

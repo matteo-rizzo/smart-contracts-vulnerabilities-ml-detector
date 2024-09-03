@@ -7,7 +7,7 @@ from torch import Tensor
 from torch.utils.data import Subset, WeightedRandomSampler
 from torch_geometric.data import Data
 
-from src.classes.data.GraphDataset import GraphDataset
+from src.classes.data.graphs.GraphDataset import GraphDataset
 
 
 class ClassBalancer:

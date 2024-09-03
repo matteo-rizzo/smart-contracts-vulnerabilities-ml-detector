@@ -46,6 +46,10 @@ def get_file_ext(file_type: str) -> str:
         return ".hex"
     elif file_type == "ast":
         return ".ast.json"
+    elif file_type == "cfg":
+        return ".json"
+    elif file_type == "opcode":
+        return ".opcodes.txt"
     else:
         raise ValueError(f"File type '{file_type}' has no supported file extension!")
 
@@ -66,6 +70,10 @@ def get_file_id(file_type: str) -> str:
         return "bytecode"
     elif file_type == "ast":
         return "ast"
+    elif file_type == "cfg":
+        return "cfg"
+    elif file_type == "opcode":
+        return "opcode"
     else:
         raise ValueError(f"File type '{file_type}' has no supported file ID!")
 
@@ -79,7 +87,7 @@ def init_arg_parser() -> ArgumentParser:
     parser = argparse.ArgumentParser(description="Set configurations for the CGT dataset processing.")
     parser.add_argument("--subset", type=str, default=SUBSET, help="Subset dataset to consider within CGT")
     parser.add_argument("--file_type", type=str, default=FILE_TYPE, help="File type",
-                        choices=["source", "runtime", "bytecode", "ast"])
+                        choices=["source", "runtime", "bytecode", "ast", "cfg", "opcode"])
     parser.add_argument("--random_seed", type=int, default=RANDOM_SEED, help="Random seed for reproducibility")
     parser.add_argument("--path_to_dataset", type=str, default=PATH_TO_DATASET, help="Path to dataset")
     parser.add_argument("--num_folds", type=int, default=NUM_FOLDS, help="Number of folds")

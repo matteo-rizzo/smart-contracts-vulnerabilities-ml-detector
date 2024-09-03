@@ -54,7 +54,7 @@ class NewCGTGenerator:
     def load_file(file_path: str, file_type: str = "text"):
         """
         Load a file's content based on its type (text or JSON).
-        If successful, return the file's name; otherwise, return an empty string.
+        If successful, return the file's name without the extension; otherwise, return an empty string.
         """
         if os.path.exists(file_path):
             try:
@@ -63,7 +63,7 @@ class NewCGTGenerator:
                     if not content:  # Check for empty file
                         logger.warning(f"File is empty: {file_path}")
                         return ""
-                    return os.path.basename(file_path)  # Return only the filename if successful
+                    return os.path.basename(file_path).split(".")[0]
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON from {file_path}: {e}")
             except Exception as e:

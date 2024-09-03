@@ -6,7 +6,7 @@ from typing import List, Union, Optional, Dict
 import pandas as pd
 from torch_geometric.data import Data
 
-from src.classes.data.AST2GraphConverter import AST2GraphConverter
+from src.classes.data.graphs.GraphConverter import GraphConverter
 from src.utility import get_file_config
 
 
@@ -16,14 +16,14 @@ class FileLoader:
 
     :param path_to_dataset: Path to the dataset directory.
     :type path_to_dataset: str
-    :param file_types: List of file types (e.g., ["sol", "bytecode", "runtime", "ast"]).
+    :param file_types: List of file types (e.g., ["sol", "bytecode", "runtime", "ast", "opcode", "cfg"]).
     :type file_types: List[str]
     """
 
     def __init__(self, path_to_dataset: str, file_types: List[str]):
         self.__path_to_dataset = path_to_dataset
         self.__file_configs = {file_type: get_file_config(file_type) for file_type in file_types}
-        self.graph_converter = AST2GraphConverter()
+        self.graph_converter = GraphConverter()
 
     @staticmethod
     def __preprocess_hex(hex_data: str) -> str:
@@ -68,6 +68,39 @@ class FileLoader:
         data_graph = self.graph_converter.ast_to_graph(ast_dict)
         return data_graph
 
+    @staticmethod
+    def __preprocess_opcode(opcode_data: str) -> str:
+        """
+        Preprocess opcode data by converting it to a standardized format.
+
+        :param opcode_data: Raw opcode data string.
+        :type opcode_data: str
+        :return: Preprocessed opcode data.
+        :rtype: str
+        """
+        # Normalize opcode formatting, e.g., removing addresses and standardizing spacing
+        lines = opcode_data.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Remove addresses and other non-opcode text
+            cleaned_line = re.sub(r'^\S+\s+', '', line)
+            cleaned_lines.append(cleaned_line.strip())
+        return '\n'.join(cleaned_lines)
+
+    def __preprocess_cfg(self, cfg_json: str) -> Data:
+        """
+        Preprocess CFG JSON data and convert it to a PyTorch Geometric Data object.
+
+        :param cfg_json: CFG JSON string.
+        :type cfg_json: str
+        :return: PyTorch Geometric Data object.
+        :rtype: Data
+        """
+        cfg_dict = json.loads(cfg_json)
+        # Assuming you have a CFG to Graph converter, which might be similar to the GraphConverter
+        cfg_graph = self.graph_converter.cfg_to_graph(cfg_dict)
+        return cfg_graph
+
     def preprocess(self, data: str, file_type: str, labels: List[int] = None) -> Union[str, Data]:
         """
         Preprocess data based on the file type.
@@ -86,6 +119,10 @@ class FileLoader:
             return self.__preprocess_solidity_code(data)
         elif file_config["type"] == "ast" and labels is not None:
             return self.__preprocess_ast(data, labels)
+        elif file_type == "opcode":
+            return self.__preprocess_opcode(data)
+        elif file_type == "cfg":
+            return self.__preprocess_cfg(data)
         return self.__preprocess_hex(data)
 
     def __load_file(self, file_id: str, file_type: str) -> str:
