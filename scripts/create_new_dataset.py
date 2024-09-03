@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-
 import pandas as pd
 from rich.logging import RichHandler
 from tqdm import tqdm
@@ -38,101 +37,74 @@ class NewCGTGenerator:
 
     def ensure_fp_sol_strings(self) -> None:
         """
-        Ensure 'fp_sol' column contains only strings and the files exist.
+        Ensure 'fp_sol' column contains only valid strings and the files exist.
         """
         if 'fp_sol' not in self.dataset.columns:
             logger.error("'fp_sol' column not found in the dataset")
             raise KeyError("'fp_sol' column not found in the dataset")
 
-        self.dataset = self.dataset[self.dataset['fp_sol'].apply(lambda x: isinstance(x, str) and x.strip() != "")]
-        logger.info(f'Dataset after ensuring valid strings in fp_sol column: {self.dataset.shape}\n')
+        logger.info("Ensuring 'fp_sol' column contains valid strings and files exist...")
+        self.dataset = self.dataset[self.dataset['fp_sol'].apply(
+            lambda x: isinstance(x, str) and x.strip() != "" and
+                      os.path.exists(os.path.join(self.base_path, "source", x + ".sol"))
+        )]
+        logger.info(f'Dataset after filtering: {self.dataset.shape}\n')
 
-        # Ensure the 'fp_sol' files actually exist
-        self.dataset = self.dataset[
-            self.dataset['fp_sol'].apply(lambda x: os.path.exists(os.path.join(self.base_path, x)))]
-        logger.info(f'Dataset after ensuring fp_sol files exist: {self.dataset.shape}\n')
-
-    def load_opcodes(self, fp_sol: str) -> str:
+    @staticmethod
+    def load_file(file_path: str, file_type: str = "text"):
         """
-        Load opcodes from a text file.
+        Load a file's content based on its type (text or JSON).
+        If successful, return the file's name; otherwise, return an empty string.
         """
-        opcodes_path = os.path.join(self.base_path, 'opcode', f"{os.path.splitext(os.path.basename(fp_sol))[0]}.txt")
-        if os.path.exists(opcodes_path):
+        if os.path.exists(file_path):
             try:
-                with open(opcodes_path, 'r', encoding='utf-8') as file:
-                    return file.read()
-            except Exception as e:
-                logger.error(f"Failed to read opcodes from {opcodes_path}: {e}")
-        else:
-            logger.warning(f"Opcode file not found for {fp_sol}")
-        return ""
-
-    def load_ast(self, fp_sol: str) -> str:
-        """
-        Load AST from a file.
-        """
-        ast_path = os.path.join(self.base_path, 'ast', f"{os.path.splitext(os.path.basename(fp_sol))[0]}.ast")
-        if os.path.exists(ast_path):
-            try:
-                with open(ast_path, 'r', encoding='utf-8') as file:
-                    return file.read()
-            except Exception as e:
-                logger.error(f"Failed to read AST from {ast_path}: {e}")
-        else:
-            logger.warning(f"AST file not found for {fp_sol}")
-        return ""
-
-    def load_cfg(self, fp_sol: str) -> dict:
-        """
-        Load CFG from a JSON file.
-        """
-        cfg_path = os.path.join(self.base_path, 'cfg', f"{os.path.splitext(os.path.basename(fp_sol))[0]}.json")
-        if os.path.exists(cfg_path):
-            try:
-                with open(cfg_path, 'r', encoding='utf-8') as file:
-                    return json.load(file)
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content = file.read().strip()
+                    if not content:  # Check for empty file
+                        logger.warning(f"File is empty: {file_path}")
+                        return ""
+                    return os.path.basename(file_path)  # Return only the filename if successful
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to decode JSON from {cfg_path}: {e}")
+                logger.error(f"Failed to decode JSON from {file_path}: {e}")
             except Exception as e:
-                logger.error(f"Failed to read CFG from {cfg_path}: {e}")
+                logger.error(f"Failed to read {file_type} from {file_path}: {e}")
         else:
-            logger.warning(f"CFG file not found for {fp_sol}")
-        return {}
+            logger.warning(f"{file_type.capitalize()} file not found: {file_path}")
+        return ""
 
     def process_dataset(self) -> None:
         """
         Process the dataset to add the fp_ast, fp_opcode, and fp_cfg columns.
         """
+        logger.info("Processing dataset rows...")
         for _, row in tqdm(self.dataset.iterrows(), desc="Processing rows", leave=False, total=self.dataset.shape[0]):
             fp_sol = row['fp_sol']
-            if not isinstance(fp_sol, str) or not fp_sol.strip():
-                logger.warning(f"Skipping row with invalid fp_sol: {fp_sol}")
-                continue
-
-            fp_ast = self.load_ast(fp_sol)
-            fp_opcode = self.load_opcodes(fp_sol)
-            fp_cfg = self.load_cfg(fp_sol)
+            fp_ast = self.load_file(os.path.join(self.base_path, 'ast', f"{fp_sol}.ast.json"), file_type="json")
+            fp_opcode = self.load_file(os.path.join(self.base_path, 'opcode', f"{fp_sol}.opcodes.txt"), file_type="text")
+            fp_cfg = self.load_file(os.path.join(self.base_path, 'cfg', f"{fp_sol}-combined.json"), file_type="json")
 
             self.new_consolidated_entries.append({
                 **row,
                 "fp_ast": fp_ast,
                 "fp_opcode": fp_opcode,
-                "fp_cfg": json.dumps(fp_cfg)  # Convert the dictionary to a JSON string for storage in CSV
+                "fp_cfg": fp_cfg
             })
+        logger.info("Finished processing dataset rows.")
 
     def save_new_consolidated_dataset(self) -> None:
         """
         Save the new consolidated dataset to a CSV file.
         """
-        new_consolidated_dataset = pd.DataFrame(self.new_consolidated_entries)
-        if new_consolidated_dataset.empty:
+        if not self.new_consolidated_entries:
             logger.warning("No valid entries to save.")
-        else:
-            try:
-                new_consolidated_dataset.to_csv(self.new_consolidated_path, index=False)
-                logger.info(f'New consolidated dataset saved to {self.new_consolidated_path}')
-            except Exception as e:
-                logger.error(f"Failed to save new consolidated dataset: {e}")
+            return
+
+        new_consolidated_dataset = pd.DataFrame(self.new_consolidated_entries)
+        try:
+            new_consolidated_dataset.to_csv(self.new_consolidated_path, index=False)
+            logger.info(f'New consolidated dataset saved to {self.new_consolidated_path}')
+        except Exception as e:
+            logger.error(f"Failed to save new consolidated dataset: {e}")
 
     def process(self) -> None:
         """
@@ -142,9 +114,10 @@ class NewCGTGenerator:
         self.ensure_fp_sol_strings()
         self.process_dataset()
         self.save_new_consolidated_dataset()
+        logger.info("Processing completed successfully.")
 
 
 if __name__ == "__main__":
-    base_path = "dataset/cgt"
+    base_path = os.path.join("dataset", "cgt")
     processor = NewCGTGenerator(base_path)
     processor.process()
