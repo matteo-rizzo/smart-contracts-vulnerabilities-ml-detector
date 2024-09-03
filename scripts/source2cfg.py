@@ -94,7 +94,7 @@ def generate_combined_cfg(sol_file, output_dir):
 def process_directory(base_dir, output_base):
     """Process all Solidity files in the directory recursively."""
     for root, _, files in os.walk(base_dir):
-        output_dir = os.path.join(output_base, f"cfgs_{os.path.basename(root)}")
+        output_dir = os.path.join(output_base, f"cfg_{os.path.basename(root)}")
         for file in files:
             if file.endswith(".sol"):
                 sol_file = os.path.join(root, file)

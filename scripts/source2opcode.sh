@@ -4,7 +4,7 @@
 BASE_DIR="dataset/cgt/source"
 
 # Base output directory for opcodes
-OUTPUT_BASE_DIR="dataset/cgt/opcodes"
+OUTPUT_BASE_DIR="dataset/cgt/opcode"
 
 # Default solc version to use if no pragma is specified or if single compiler mode is selected
 DEFAULT_SOLC_VERSION="0.8.6"
