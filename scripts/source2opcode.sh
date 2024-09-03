@@ -55,13 +55,14 @@ extract_pragma_version() {
 check_and_install_solc_version() {
     local version=$1
     if ! solc-select versions | grep -q "$version"; then
-        echo "solc version $version is not installed. Installing..."
+        echo "solc version $version is not installed. Attempting to install..."
         solc-select install "$version"
         if [ $? -ne 0 ]; then
-            echo "Failed to install solc version $version. Please install it manually."
-            exit 1
+            echo "[red]Failed to install solc version $version, skipping this file.[/red]"
+            return 1  # Indicate failure
         fi
     fi
+    return 0  # Indicate success
 }
 
 # Function to process each Solidity file
@@ -88,6 +89,10 @@ process_file() {
 
     # Check and install the required solc version if not already installed
     check_and_install_solc_version "$solc_version"
+    if [ $? -ne 0 ]; then
+        echo "[red]Skipping $sol_file due to solc version installation failure.[/red]"
+        return
+    fi
 
     # Compile contract to get opcodes and save it
     echo "Processing $sol_file with solc version $solc_version..."
@@ -126,6 +131,10 @@ process_directory() {
 # If using a single compiler, ensure the specified solc version is installed and set
 if [ "$USE_SINGLE_COMPILER" = true ]; then
     check_and_install_solc_version "$DEFAULT_SOLC_VERSION"
+    if [ $? -ne 0 ]; then
+        echo "[red]Failed to install default solc version, exiting...[/red]"
+        exit 1
+    fi
     solc-select use "$DEFAULT_SOLC_VERSION"
 else
     # Store the current solc version
@@ -140,4 +149,4 @@ if [ "$USE_SINGLE_COMPILER" = false ]; then
     solc-select use "$current_version"
 fi
 
-echo "All contracts processed. Opcodes are stored in $OUTPUT_BASE_DIR"
+echo "[green]All contracts processed. Opcodes are stored in $OUTPUT_BASE_DIR[/green]"

@@ -7,12 +7,10 @@ scikit-learn==1.5.1
 networkx~=3.3
 torch-geometric
 tqdm==4.66.5
-transformers==4.44.2
+transformers==4.44.0
 xgboost==2.1.1
 matplotlib==3.9.2
 scipy==1.14.1
 iterative-stratification
 pyetherchain~=0.3.2
 evmdasm~=0.1.10
-eth-utils==5.0.0
-rich~=13.8.0

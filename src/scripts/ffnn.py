@@ -13,7 +13,7 @@ from src.classes.training.Trainer import Trainer
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, MAX_FEATURES
 from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
-MULTIMODAL = True
+MULTIMODAL = False
 MULTIMODAL_FILE_TYPES = ["source", "bytecode"]
 
 

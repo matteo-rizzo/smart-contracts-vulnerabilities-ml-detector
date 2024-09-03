@@ -80,14 +80,11 @@ class GraphFeatureExtractor:
         :param node: The FunctionDefinition AST node.
         :return: A list of function-specific features.
         """
-        features = []
-        features.append(GraphFeatureExtractor.hash_feature(node.get('name', '')))
-        features.append(GraphFeatureExtractor.hash_feature(node.get('visibility', '')))
-        features.append(GraphFeatureExtractor.hash_feature(node.get('stateMutability', '')))
-        features.append(int(node.get('isConstructor', False)))
-        features.append(int(node.get('payable', False)))
-        features.append(len(node.get('modifiers', [])))  # Number of modifiers
-        features.append(len(node.get('parameters', {}).get('parameters', [])))  # Number of parameters
+        features = [GraphFeatureExtractor.hash_feature(node.get('name', '')),
+                    GraphFeatureExtractor.hash_feature(node.get('visibility', '')),
+                    GraphFeatureExtractor.hash_feature(node.get('stateMutability', '')),
+                    int(node.get('isConstructor', False)), int(node.get('payable', False)),
+                    len(node.get('modifiers', [])), len(node.get('parameters', {}).get('parameters', []))]
 
         # Detecting loops and conditionals within the function body
         function_body = node.get('body', {})
@@ -108,13 +105,11 @@ class GraphFeatureExtractor:
         :param node: The VariableDeclaration AST node.
         :return: A list of variable-specific features.
         """
-        features = []
-        features.append(GraphFeatureExtractor.hash_feature(node.get('name', '')))
-        features.append(GraphFeatureExtractor.hash_feature(node.get('visibility', '')))
-        features.append(GraphFeatureExtractor.hash_feature(node.get('storageLocation', '')))
-        features.append(GraphFeatureExtractor.hash_feature(node.get('typeDescriptions', {}).get('typeString', '')))
-        features.append(int(node.get('constant', False)))
-        features.append(int(node.get('stateVariable', False)))
+        features = [GraphFeatureExtractor.hash_feature(node.get('name', '')),
+                    GraphFeatureExtractor.hash_feature(node.get('visibility', '')),
+                    GraphFeatureExtractor.hash_feature(node.get('storageLocation', '')),
+                    GraphFeatureExtractor.hash_feature(node.get('typeDescriptions', {}).get('typeString', '')),
+                    int(node.get('constant', False)), int(node.get('stateVariable', False))]
         return features
 
     @staticmethod
@@ -138,8 +133,7 @@ class GraphFeatureExtractor:
         :param node: The Mapping AST node.
         :return: A list of mapping-specific features.
         """
-        features = []
-        features.append(GraphFeatureExtractor.hash_feature(node.get('typeDescriptions', {}).get('typeString', '')))
+        features = [GraphFeatureExtractor.hash_feature(node.get('typeDescriptions', {}).get('typeString', ''))]
         return features
 
     @staticmethod
@@ -150,9 +144,8 @@ class GraphFeatureExtractor:
         :param node: The BinaryOperation AST node.
         :return: A list of binary operation-specific features.
         """
-        features = []
-        features.append(GraphFeatureExtractor.hash_feature(node.get('operator', '')))
-        features.append(GraphFeatureExtractor.hash_feature(node.get('typeDescriptions', {}).get('typeString', '')))
+        features = [GraphFeatureExtractor.hash_feature(node.get('operator', '')),
+                    GraphFeatureExtractor.hash_feature(node.get('typeDescriptions', {}).get('typeString', ''))]
         return features
 
     @staticmethod
