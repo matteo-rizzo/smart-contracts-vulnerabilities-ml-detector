@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 from rich import print
 from rich.progress import Progress
@@ -47,7 +46,7 @@ def process_directories(root_dir):
 
         for dir_name in os.listdir(root_dir):
             dir_path = os.path.join(root_dir, dir_name)
-            if os.path.isdir(dir_path):
+            if os.path.isdir(dir_path) and os.listdir(dir_path):  # Check if directory is not empty
                 dataset_name, experiment_type = parse_directory_name(dir_name)
                 if dataset_name and experiment_type:
                     if dataset_name not in dataset_data:
@@ -61,8 +60,9 @@ def process_directories(root_dir):
 
 
 def save_combined_csv(dataset_name, dataframes, output_dir):
-    """Saves combined dataframes to a CSV file."""
+    """Saves combined dataframes to a CSV file without duplicate rows."""
     combined_df = pd.concat(dataframes, ignore_index=True)
+    combined_df.drop_duplicates(inplace=True)  # Remove duplicate rows
     output_path = os.path.join(output_dir, f'{dataset_name}_combined_experiments.csv')
     combined_df.to_csv(output_path, index=False)
     print(f"[green]Saved combined data for {dataset_name} to[/green] [bold]{output_path}[/bold]")

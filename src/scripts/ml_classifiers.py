@@ -11,7 +11,7 @@ from src.classes.classifiers.ClassifiersPoolEvaluator import ClassifiersPoolEval
 from src.classes.classifiers.GraphClassifiersPoolEvaluator import GraphClassifiersPoolEvaluator
 from src.classes.data.DataPreprocessor import DataPreprocessor
 from src.classes.data.MultimodalVectorizer import MultimodalVectorizer
-from src.settings import MAX_FEATURES
+from src.settings import MAX_FEATURES, DEVICE
 from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
 MULTIMODAL = False
@@ -20,27 +20,41 @@ MULTIMODAL_FILE_TYPES = ["source", "bytecode"]
 
 def initialize_classifiers(random_seed: int) -> Dict[str, object]:
     """
-    Initializes classifiers with the given random seed.
+    Initializes classifiers with the given random seed, optimized for speed,
+    and uses GPU if available for models like XGBoost.
 
     :param random_seed: The random seed for reproducibility.
     :return: A dictionary of classifier instances.
     """
+    # Check if GPU is available for XGBoost
+    use_gpu = str(DEVICE) != "cpu"
+
+    if use_gpu:
+        print("GPU detected. Using GPU for applicable models.")
+
     return {
         "svm": SVC(kernel='linear', probability=True, C=1.0, gamma='scale', random_state=random_seed),
-        "logistic_regression": LogisticRegression(C=1.0, solver='liblinear', max_iter=100, random_state=random_seed),
-        "knn": KNeighborsClassifier(n_neighbors=10, weights='distance', metric='minkowski'),
+        "logistic_regression": LogisticRegression(
+            C=1.0, solver='liblinear', max_iter=100, random_state=random_seed
+        ),
+        "knn": KNeighborsClassifier(
+            n_neighbors=10, weights='distance', metric='minkowski', n_jobs=-1
+        ),
         "random_forest": RandomForestClassifier(
-            n_estimators=200, max_depth=10, min_samples_split=5,
-            min_samples_leaf=2, max_features='sqrt', random_state=random_seed
+            n_estimators=100, max_depth=8, min_samples_split=5,
+            min_samples_leaf=2, max_features='sqrt', n_jobs=-1,
+            random_state=random_seed
         ),
         "gradient_boosting": GradientBoostingClassifier(
-            n_estimators=150, learning_rate=0.05, max_depth=5,
+            n_estimators=100, learning_rate=0.05, max_depth=4,
             min_samples_split=2, min_samples_leaf=1, random_state=random_seed
         ),
         "xgboost": XGBClassifier(
-            eval_metric='mlogloss', use_label_encoder=False, n_estimators=150,
-            max_depth=6, learning_rate=0.1, colsample_bytree=0.8,
-            subsample=0.8, random_state=random_seed
+            eval_metric='mlogloss', use_label_encoder=False, n_estimators=100,
+            max_depth=5, learning_rate=0.1, colsample_bytree=0.8,
+            subsample=0.8, random_state=random_seed, n_jobs=-1,
+            tree_method='gpu_hist' if use_gpu else 'hist',
+            predictor='gpu_predictor' if use_gpu else 'cpu_predictor'
         )
     }
 
