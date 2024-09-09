@@ -39,9 +39,10 @@ print(f"Running on device {DEVICE}")
 RANDOM_SEED = 0
 PATH_TO_DATASET = os.path.join("dataset", "cgt")
 MAX_FEATURES = 256
+PCA_COMPONENTS=150
 BATCH_SIZE = 1
 NUM_FOLDS = 10
-NUM_EPOCHS = 100
+NUM_EPOCHS = 50
 LR = 0.00001
 TEST_SIZE = 0.1
 FILE_TYPE = "cfg"

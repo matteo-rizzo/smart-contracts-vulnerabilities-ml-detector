@@ -1,34 +1,49 @@
 from typing import Dict, List
-
 import numpy as np
 import pandas as pd
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+from sklearn.decomposition import PCA  # Import PCA
 from sklearn.multiclass import OneVsRestClassifier
-
 from src.classes.training.ClassBalancer import ClassBalancer
 from src.classes.training.MetricsHandler import MetricsHandler
 
 
 class ClassifiersPoolEvaluator:
     def __init__(self, inputs: np.ndarray, labels: np.ndarray, classifiers: Dict[str, object], num_folds: int,
-                 random_seed: int):
+                 random_seed: int, pca_components: int = None):
         """
-        Initialize the ClassifiersPoolEvaluator with inputs, labels, classifiers, number of folds, and random seed.
+        Initialize the ClassifiersPoolEvaluator with inputs, labels, classifiers, number of folds, random seed,
+        and optional PCA components.
 
         :param inputs: Array of input features.
         :param labels: Array of labels corresponding to the input features.
         :param classifiers: Dictionary of classifiers to evaluate.
         :param num_folds: Number of folds for k-fold cross-validation.
         :param random_seed: Random seed for reproducibility.
+        :param pca_components: Number of principal components to keep for dimensionality reduction.
         """
         self.__classifiers = classifiers
         self.__num_folds = num_folds
         self.__random_seed = random_seed
         self.__x = inputs
         self.__y = labels
+        self.__pca_components = pca_components  # Added PCA component parameter
+
+        # Apply PCA if pca_components is specified
+        if self.__pca_components is not None:
+            self.__apply_pca()
 
         print("Computing class weights...")
         self.__class_weights = self.__compute_class_weights()
+
+    def __apply_pca(self) -> None:
+        """
+        Apply PCA to reduce the dimensionality of the input data.
+        """
+        print(f"Applying PCA to reduce dimensionality to {self.__pca_components} components.")
+        pca = PCA(n_components=self.__pca_components, random_state=self.__random_seed)
+        self.__x = pca.fit_transform(self.__x)  # Transform the inputs using PCA
+        print(f"New shape of inputs after PCA: {self.__x.shape}")
 
     def __compute_class_weights(self) -> Dict[str, np.ndarray]:
         """

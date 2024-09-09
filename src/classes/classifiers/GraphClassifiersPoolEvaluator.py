@@ -1,37 +1,43 @@
 from typing import Dict, List, Tuple
-
 import numpy as np
 import pandas as pd
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+from sklearn.decomposition import PCA  # Import PCA
 from sklearn.multiclass import OneVsRestClassifier
 from torch_geometric.data import Data
-
 from src.classes.training.MetricsHandler import MetricsHandler
 
 
 class GraphClassifiersPoolEvaluator:
     def __init__(self, inputs: List[Data], labels: List[List[int]], classifiers: Dict[str, object], num_folds: int,
-                 random_seed: int):
+                 random_seed: int, pca_components: int = None):
         """
-        Initialize the ClassifiersPoolEvaluator with inputs, labels, classifiers, number of folds, and random seed.
+        Initialize the ClassifiersPoolEvaluator with inputs, labels, classifiers, number of folds, random seed,
+        and optional PCA components.
 
         :param inputs: List of graph data objects.
         :param labels: List of labels corresponding to the graph data objects.
         :param classifiers: Dictionary of classifiers to evaluate.
         :param num_folds: Number of folds for k-fold cross-validation.
         :param random_seed: Random seed for reproducibility.
+        :param pca_components: Number of PCA components to keep for dimensionality reduction.
         """
         self.__classifiers = classifiers
         self.__num_folds = num_folds
         self.__random_seed = random_seed
         self.__inputs = inputs
         self.__labels = np.array(labels)
+        self.__pca_components = pca_components  # Store the number of PCA components
 
         print(f"Inputs shape: {len(inputs)}, Labels shape: {self.__labels.shape}")
 
         # Extract features and labels
         self.__features, self.__labels = self._extract_features_and_labels(self.__inputs)
         print(f"Extracted features shape: {self.__features.shape}, Extracted labels shape: {self.__labels.shape}")
+
+        # Apply PCA if specified
+        if self.__pca_components is not None:
+            self.__apply_pca()
 
     @staticmethod
     def _extract_features_and_labels(graph_dataset: List[Data]) -> Tuple[np.ndarray, np.ndarray]:
@@ -61,6 +67,15 @@ class GraphClassifiersPoolEvaluator:
         labels = np.array(labels)
 
         return flattened_features, labels
+
+    def __apply_pca(self) -> None:
+        """
+        Apply PCA to reduce the dimensionality of the input features.
+        """
+        print(f"Applying PCA to reduce dimensionality to {self.__pca_components} components.")
+        pca = PCA(n_components=self.__pca_components, random_state=self.__random_seed)
+        self.__features = pca.fit_transform(self.__features)  # Apply PCA on the extracted features
+        print(f"New shape of features after PCA: {self.__features.shape}")
 
     def __evaluate_fold(self, classifier: OneVsRestClassifier, train_index: List[int], test_index: List[int],
                         fold_num: int) -> Dict[str, float]:
