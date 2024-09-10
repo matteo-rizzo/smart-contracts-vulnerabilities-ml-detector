@@ -1,8 +1,6 @@
 #!/bin/bash
 
-source venv/bin/activate
-
-#!/bin/bash
+source .venv/bin/activate
 
 # Define the root directory of your project
 PROJECT_ROOT="src/scripts"

@@ -32,9 +32,9 @@ def initialize_classifiers(random_seed: int) -> Dict[str, object]:
         print("GPU detected. Using GPU for applicable models.")
 
     return {
-        "svm": SVC(kernel='linear', probability=True, C=1.0, gamma='scale', random_state=random_seed),
+        "svm": SVC(kernel='linear', probability=False, C=0.1, random_state=random_seed),
         "logistic_regression": LogisticRegression(
-            C=1.0, solver='liblinear', max_iter=100, random_state=random_seed
+            C=0.1, solver='liblinear', max_iter=100, random_state=random_seed
         ),
         "knn": KNeighborsClassifier(
             n_neighbors=10, weights='distance', metric='minkowski', n_jobs=-1
