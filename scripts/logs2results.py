@@ -14,25 +14,41 @@ def create_directory(path):
 
 
 def parse_directory_name(directory_name):
-    """Parses the directory name to extract dataset name and experiment type."""
+    """Parses the directory name to extract dataset name and data type."""
     parts = directory_name.split('_')
     if len(parts) < 3:
         print(f"[yellow]Invalid directory format, skipping:[/yellow] {directory_name}")
         return None, None
     dataset_name = parts[1]
-    experiment_type = parts[2]
-    return dataset_name, experiment_type
+    data_type = parts[2]
+    return dataset_name, data_type
 
 
-def read_experiment_files(dir_path, experiment_type):
-    """Reads all CSV files in a directory and returns a list of dataframes."""
+def read_experiment_files(dir_path, data_type):
+    """Reads all CSV files in a directory and returns a list of dataframes, skipping subdirectories."""
     dataframes = []
     for file_name in os.listdir(dir_path):
+        file_path = os.path.join(dir_path, file_name)
+
+        # Skip directories
+        if os.path.isdir(file_path):
+            print(f"[yellow]Skipping directory:[/yellow] {file_path}")
+            continue
+
         if file_name.endswith('.csv'):
             model_name = file_name.replace('.csv', '')
-            df = pd.read_csv(os.path.join(dir_path, file_name))
-            df['Experiment Type'] = experiment_type
-            df['Model'] = model_name
+            csv_path = os.path.join(dir_path, file_name)
+
+            # Log the CSV file being read
+            print(f"[blue]Reading CSV file:[/blue] {csv_path}")
+
+            # Read and print the dataframe
+            df = pd.read_csv(csv_path)
+            print(f"[magenta]DataFrame content for {csv_path}:[/magenta]")
+            print(df)
+
+            df['modality'] = data_type
+            df['model'] = model_name
             dataframes.append(df)
     return dataframes
 
@@ -47,11 +63,11 @@ def process_directories(root_dir):
         for dir_name in os.listdir(root_dir):
             dir_path = os.path.join(root_dir, dir_name)
             if os.path.isdir(dir_path) and os.listdir(dir_path):  # Check if directory is not empty
-                dataset_name, experiment_type = parse_directory_name(dir_name)
-                if dataset_name and experiment_type:
+                dataset_name, data_type = parse_directory_name(dir_name)
+                if dataset_name and data_type:
                     if dataset_name not in dataset_data:
                         dataset_data[dataset_name] = []
-                    dataframes = read_experiment_files(dir_path, experiment_type)
+                    dataframes = read_experiment_files(dir_path, data_type)
                     dataset_data[dataset_name].extend(dataframes)
 
             progress.update(task, advance=1)
@@ -60,10 +76,18 @@ def process_directories(root_dir):
 
 
 def save_combined_csv(dataset_name, dataframes, output_dir):
-    """Saves combined dataframes to a CSV file without duplicate rows."""
+    """Saves combined dataframes to a CSV file without duplicate rows, ensuring the correct column order and sorting."""
     combined_df = pd.concat(dataframes, ignore_index=True)
-    combined_df.drop_duplicates(inplace=True)  # Remove duplicate rows
-    output_path = os.path.join(output_dir, f'{dataset_name}_combined_experiments.csv')
+
+    # Ensure the correct column order: modality and model first
+    columns_order = ['modality', 'model'] + [col for col in combined_df.columns if
+                                              col not in ['modality', 'model']]
+    combined_df = combined_df[columns_order]
+
+    # Sort by modality and model alphabetically
+    combined_df.sort_values(by=['modality', 'model'], inplace=True)
+
+    output_path = os.path.join(output_dir, f'{dataset_name}.csv')
     combined_df.to_csv(output_path, index=False)
     print(f"[green]Saved combined data for {dataset_name} to[/green] [bold]{output_path}[/bold]")
 

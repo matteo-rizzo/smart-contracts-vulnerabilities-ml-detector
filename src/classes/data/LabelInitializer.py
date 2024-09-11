@@ -20,8 +20,8 @@ class LabelInitializer:
         :return: The number of unique properties.
         :rtype: int
         """
-        unique_properties = data['property'].str.lower().unique()
-        self._gt = {prop: idx for idx, prop in enumerate(unique_properties)}
+        unique_properties = data['swc'].unique()
+        self._gt = {str(prop): idx for idx, prop in enumerate(unique_properties)}
         return len(self._gt)
 
     def initialize_labels(self, group: pd.DataFrame) -> List[int]:
@@ -36,7 +36,7 @@ class LabelInitializer:
         num_labels = len(self._gt)
         labels = [0] * num_labels
         for _, row in group.iterrows():
-            prop = row["property"].lower()
+            prop = str(row["swc"])
             if row['property_holds'] == 't':
                 labels[self._gt[prop]] = 1
         return labels

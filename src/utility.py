@@ -102,7 +102,7 @@ def make_log_dir(experiment_id: str):
     :param experiment_id: The ID of the experiment.
     :return: The path to the log directory.
     """
-    log_dir = os.path.join("log", f"experiment_{experiment_id}")
+    log_dir = os.path.join("log_SWC", f"experiment_{experiment_id}")
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
         print(f"Log directory created at {log_dir}")

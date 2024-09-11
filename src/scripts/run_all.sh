@@ -8,10 +8,10 @@ source venv/bin/activate
 PROJECT_ROOT="src/scripts"
 
 # Define the file types and subsets to iterate over
-# file_types=("source" "runtime" "bytecode" "ast")
-file_types=("ast")
+# file_types=("source" "runtime" "bytecode" "ast" "opcode" "cfg")
+file_types=("cfg")
 # subsets=("CodeSmells" "Zeus" "eThor" "ContractFuzzer" "SolidiFI" "EverEvolvingG" "Doublade" "NPChecker" "JiuZhou" "SBcurated" "SWCregistry" "EthRacer" "NotSoSmartC")
-subsets=("CodeSmells" "Zeus" "ContractFuzzer" "SolidiFI" "EverEvolvingG" "Doublade" "NPChecker" "JiuZhou" "SBcurated" "SWCregistry" "EthRacer" "NotSoSmartC")
+subsets=("CodeSmells")
 
 # Define the scripts to run
 #scripts=("ffnn.py" "lstm.py" "codebert.py" "ml_classifiers.py", "gcn.py")
