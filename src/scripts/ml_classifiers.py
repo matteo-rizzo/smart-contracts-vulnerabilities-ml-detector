@@ -11,12 +11,11 @@ from src.classes.classifiers.ClassifiersPoolEvaluator import ClassifiersPoolEval
 from src.classes.classifiers.GraphClassifiersPoolEvaluator import GraphClassifiersPoolEvaluator
 from src.classes.data.DataPreprocessor import DataPreprocessor
 from src.classes.data.MultimodalVectorizer import MultimodalVectorizer
-from src.settings import MAX_FEATURES, DEVICE
+from src.settings import MAX_FEATURES, DEVICE, PCA_COMPONENTS
 from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
 MULTIMODAL = False
 MULTIMODAL_FILE_TYPES = ["source", "bytecode"]
-
 
 def initialize_classifiers(random_seed: int) -> Dict[str, object]:
     """
@@ -33,9 +32,9 @@ def initialize_classifiers(random_seed: int) -> Dict[str, object]:
         print("GPU detected. Using GPU for applicable models.")
 
     return {
-        "svm": SVC(kernel='linear', probability=True, C=1.0, gamma='scale', random_state=random_seed),
+        "svm": SVC(kernel='linear', probability=False, C=0.1, random_state=random_seed),
         "logistic_regression": LogisticRegression(
-            C=1.0, solver='liblinear', max_iter=100, random_state=random_seed
+            C=0.1, solver='liblinear', max_iter=100, random_state=random_seed
         ),
         "knn": KNeighborsClassifier(
             n_neighbors=10, weights='distance', metric='minkowski', n_jobs=-1
@@ -58,7 +57,6 @@ def initialize_classifiers(random_seed: int) -> Dict[str, object]:
         )
     }
 
-
 def main(config: Dict):
     # Initialize the DataPreprocessor
     print("Initializing DataPreprocessor...")
@@ -77,7 +75,8 @@ def main(config: Dict):
             inputs=x, labels=y,
             classifiers=initialize_classifiers(config['random_seed']),
             num_folds=config['num_folds'],
-            random_seed=config['random_seed']
+            random_seed=config['random_seed'],
+            pca_components=config.get('pca_components')  # Pass PCA components
         )
     else:
         vectorizer = MultimodalVectorizer(max_features=config["max_features"], multimodal=config["multimodal"])
@@ -94,7 +93,8 @@ def main(config: Dict):
             inputs=x, labels=y,
             classifiers=initialize_classifiers(config['random_seed']),
             num_folds=config['num_folds'],
-            random_seed=config['random_seed']
+            random_seed=config['random_seed'],
+            pca_components=config.get('pca_components')  # Pass PCA components
         )
 
     print("Starting pool evaluation...")
@@ -105,6 +105,7 @@ if __name__ == '__main__':
     parser = init_arg_parser()
     parser.add_argument("--max_features", type=int, default=MAX_FEATURES, help="Maximum features for TF-IDF vectorizer")
     parser.add_argument("--multimodal", type=bool, default=MULTIMODAL, help="Process multiple modalities at once")
+    parser.add_argument("--pca_components", type=int, default=PCA_COMPONENTS, help="Number of PCA components for dimensionality reduction")  # Add PCA argument
 
     args = parser.parse_args()
     config = vars(args)

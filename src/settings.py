@@ -39,10 +39,11 @@ print(f"Running on device {DEVICE}")
 RANDOM_SEED = 0
 PATH_TO_DATASET = os.path.join("dataset", "cgt")
 MAX_FEATURES = 256
+PCA_COMPONENTS=10
 BATCH_SIZE = 1
 NUM_FOLDS = 5
-NUM_EPOCHS = 25
-LR = 0.001
+NUM_EPOCHS = 50
+LR = 0.00001
 TEST_SIZE = 0.1
 FILE_TYPE = "cfg"
 SUBSET = "CodeSmells"
