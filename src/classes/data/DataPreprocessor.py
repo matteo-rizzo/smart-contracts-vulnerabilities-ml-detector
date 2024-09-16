@@ -9,6 +9,7 @@ from src.classes.data.DataHandler import DataHandler
 from src.classes.data.FileContentProcessor import FileContentProcessor
 from src.classes.data.FileLoader import FileLoader
 from src.classes.data.LabelInitializer import LabelInitializer
+from src.settings import LABEL_TYPE
 
 
 class DataPreprocessor:
@@ -90,7 +91,7 @@ class DataPreprocessor:
         """
         for file_type in self.file_types:
             file_col = f"fp_{self.file_loader.get_file_config(file_type)['id']}"
-            data = data.dropna(subset=[file_col])
+            data = data.dropna(subset=[file_col]).dropna(subset=[LABEL_TYPE])
         return data
 
     def load_and_process_data(self) -> Union[None, Tuple[List[Data], List[List[int]]]]:

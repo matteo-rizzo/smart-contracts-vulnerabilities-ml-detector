@@ -2,6 +2,8 @@ from typing import List
 
 import pandas as pd
 
+from src.settings import LABEL_TYPE
+
 
 class LabelInitializer:
     """
@@ -20,7 +22,7 @@ class LabelInitializer:
         :return: The number of unique properties.
         :rtype: int
         """
-        unique_properties = data['swc'].unique()
+        unique_properties = data[LABEL_TYPE].dropna().unique()
         self._gt = {str(prop): idx for idx, prop in enumerate(unique_properties)}
         return len(self._gt)
 
@@ -36,7 +38,7 @@ class LabelInitializer:
         num_labels = len(self._gt)
         labels = [0] * num_labels
         for _, row in group.iterrows():
-            prop = str(row["swc"])
+            prop = str(row[LABEL_TYPE])
             if row['property_holds'] == 't':
                 labels[self._gt[prop]] = 1
         return labels

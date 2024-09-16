@@ -7,7 +7,7 @@ PROJECT_ROOT="src/scripts"
 
 # Define the file types and subsets to iterate over
 # file_types=("source" "runtime" "bytecode" "ast" "cfg" "opcode")
-file_types=("ast")
+file_types=("cfg")
 # subsets=("CodeSmells" "Zeus" "eThor" "ContractFuzzer" "SolidiFI" "EverEvolvingG" "Doublade" "NPChecker" "JiuZhou" "SBcurated" "SWCregistry" "EthRacer" "NotSoSmartC")
 subsets=("CodeSmells")
 

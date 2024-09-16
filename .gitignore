@@ -1043,3 +1043,5 @@ FodyWeavers.xsd
 /results/
 /dataset/
 /log_SWC/
+/log_dasp/
+/results_swc/

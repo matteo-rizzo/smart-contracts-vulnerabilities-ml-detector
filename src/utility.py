@@ -7,7 +7,7 @@ from typing import Dict
 import numpy as np
 import torch
 
-from src.settings import SUBSET, FILE_TYPE, RANDOM_SEED, PATH_TO_DATASET, NUM_FOLDS, TEST_SIZE
+from src.settings import SUBSET, FILE_TYPE, RANDOM_SEED, PATH_TO_DATASET, NUM_FOLDS, TEST_SIZE, LABEL_TYPE
 
 
 def make_reproducible(random_seed: int):
@@ -102,7 +102,7 @@ def make_log_dir(experiment_id: str):
     :param experiment_id: The ID of the experiment.
     :return: The path to the log directory.
     """
-    log_dir = os.path.join("log_SWC", f"experiment_{experiment_id}")
+    log_dir = os.path.join("log_{}".format(LABEL_TYPE), f"experiment_{experiment_id}")
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
         print(f"Log directory created at {log_dir}")

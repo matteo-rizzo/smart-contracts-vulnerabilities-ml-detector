@@ -15,7 +15,7 @@ from src.settings import MAX_FEATURES, DEVICE, PCA_COMPONENTS
 from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
 MULTIMODAL = False
-MULTIMODAL_FILE_TYPES = ["source", "bytecode"]
+MULTIMODAL_FILE_TYPES = ["source", "bytecode", "runtime"]
 
 def initialize_classifiers(random_seed: int) -> Dict[str, object]:
     """

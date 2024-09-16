@@ -18,7 +18,8 @@ class MultimodalVectorizer:
             self.__vectorizers = {
                 "source": TfidfVectorizer(max_features=max_features),
                 "bytecode": TfidfVectorizer(max_features=max_features),
-                "runtime": TfidfVectorizer(max_features=max_features)
+                "runtime": TfidfVectorizer(max_features=max_features),
+                "opcode": TfidfVectorizer(max_features=max_features)
             }
         else:
             self.__vectorizer = TfidfVectorizer(max_features=max_features)
