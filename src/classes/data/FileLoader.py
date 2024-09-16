@@ -71,21 +71,33 @@ class FileLoader:
     @staticmethod
     def __preprocess_opcode(opcode_data: str) -> str:
         """
-        Preprocess opcode data by converting it to a standardized format.
+        Preprocess opcode by removing blank lines, unnecessary whitespace, and generalizing constants.
 
-        :param opcode_data: Raw opcode data string.
+        :param opcode_data: Opcode string.
         :type opcode_data: str
-        :return: Preprocessed opcode data.
+        :return: Preprocessed opcode string.
         :rtype: str
         """
-        # Normalize opcode formatting, e.g., removing addresses and standardizing spacing
+        # Remove any comments (assuming comments start with ';')
+        opcode_data = re.sub(r';.*', '', opcode_data)
+
+        # Split the opcode data into lines and remove blank lines
         lines = opcode_data.split('\n')
-        cleaned_lines = []
-        for line in lines:
-            # Remove addresses and other non-opcode text
-            cleaned_line = re.sub(r'^\S+\s+', '', line)
-            cleaned_lines.append(cleaned_line.strip())
-        return '\n'.join(cleaned_lines)
+        cleaned_lines = [line.strip() for line in lines if line.strip()]
+
+        # Join the cleaned lines into a single string
+        opcode_str = ' '.join(cleaned_lines)
+
+        # Replace PUSH instructions with constants with a placeholder
+        opcode_str = re.sub(r'(PUSH\d+)\s+(0x[0-9a-fA-F]+|\d+)', r'\1 [CONST]', opcode_str)
+
+        # Replace remaining hexadecimal constants with a placeholder
+        opcode_str = re.sub(r'0x[0-9a-fA-F]+', '[CONST]', opcode_str)
+
+        # Replace decimal numbers with a placeholder
+        opcode_str = re.sub(r'\b\d+\b', '[CONST]', opcode_str)
+
+        return opcode_str
 
     def __preprocess_cfg(self, cfg_json: str) -> Data:
         """

@@ -30,4 +30,4 @@ LR = 0.001
 TEST_SIZE = 0.1
 FILE_TYPE = "source"
 SUBSET = "CodeSmells"
-LABEL_TYPE = "property"
+LABEL_TYPE = "swc"
