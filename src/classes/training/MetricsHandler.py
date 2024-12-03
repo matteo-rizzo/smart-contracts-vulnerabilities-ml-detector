@@ -30,7 +30,6 @@ class MetricsHandler:
         :param log_id: Identifier for logging purposes, typically the model name.
         :param log_dir: The logging directory.
         """
-        # Create the subdirectory if it does not exist
         save_dir = os.path.join(log_dir, log_id)
         os.makedirs(save_dir, exist_ok=True)
 
@@ -53,7 +52,6 @@ class MetricsHandler:
         plt.savefig(f"{save_dir}/fold_{fold + 1}_metrics.png")
         plt.close()
 
-        # Plot training and validation loss
         plt.figure(figsize=(10, 5))
         plt.plot(epochs, history['train_loss'], label='Training Loss')
         plt.plot(epochs, history['val_loss'], label='Validation Loss')
@@ -65,30 +63,34 @@ class MetricsHandler:
         plt.close()
 
     @staticmethod
-    def compute_metrics(true_labels: List[Any], pred_labels: List[Any]) -> Dict[str, float]:
+    def compute_metrics(true_labels: List[Any], pred_labels: List[Any], is_binary: bool = True) -> Dict[str, float]:
         """
         Compute evaluation metrics for the given true and predicted labels.
 
         :param true_labels: The ground truth labels.
         :param pred_labels: The predicted labels.
+        :param is_binary: Boolean flag to indicate if the task is binary classification.
         :return: A dictionary containing precision, recall, F1 score, and accuracy.
         """
-        # Convert true_labels and pred_labels to numpy arrays if they are not already
         true_labels = np.array(true_labels)
         pred_labels = np.array(pred_labels)
 
-        # Ensure the labels are in the correct shape
-        if true_labels.ndim == 1:
-            true_labels = true_labels.reshape(-1, 1)
-        if pred_labels.ndim == 1:
-            pred_labels = pred_labels.reshape(-1, 1)
-
-        return {
-            "accuracy": accuracy_score(true_labels, pred_labels),
-            "precision": precision_score(true_labels, pred_labels, average='samples', zero_division=0),
-            "recall": recall_score(true_labels, pred_labels, average='samples', zero_division=0),
-            "f1": f1_score(true_labels, pred_labels, average='samples', zero_division=0)
-        }
+        # Adjust metrics calculation for binary classification
+        if is_binary:
+            return {
+                "accuracy": accuracy_score(true_labels, pred_labels),
+                "precision": precision_score(true_labels, pred_labels, average='binary', zero_division=0),
+                "recall": recall_score(true_labels, pred_labels, average='binary', zero_division=0),
+                "f1": f1_score(true_labels, pred_labels, average='binary', zero_division=0)
+            }
+        else:
+            # Multilabel classification
+            return {
+                "accuracy": accuracy_score(true_labels, pred_labels),
+                "precision": precision_score(true_labels, pred_labels, average='samples', zero_division=0),
+                "recall": recall_score(true_labels, pred_labels, average='samples', zero_division=0),
+                "f1": f1_score(true_labels, pred_labels, average='samples', zero_division=0)
+            }
 
     @staticmethod
     def save_results(results: pd.DataFrame, filename: str, log_dir: str) -> None:
@@ -100,5 +102,6 @@ class MetricsHandler:
         :param log_dir: The logging directory.
         """
         df = pd.DataFrame(results)
+        os.makedirs(log_dir, exist_ok=True)
         df.to_csv(os.path.join(log_dir, filename), index=False)
         print(f"All fold results saved to '{os.path.join(log_dir, filename)}'")

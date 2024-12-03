@@ -1,5 +1,5 @@
 # pip install torch==2.1.0+cu118 torchvision==0.16.0+cu118 torchaudio==2.1.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html
-torch==2.4.1
+torch~=2.4.0
 torchvision==0.19.1
 numpy==2.1.1
 pandas~=2.2.2
@@ -16,3 +16,9 @@ pyetherchain~=0.3.2
 evmdasm~=0.1.10
 rich==13.8.0
 eth-utils~=5.0.0
+torch_geometric~=2.5.3
+slither~=0.3.0
+neo4j~=5.27.0
+nest-asyncio~=1.6.0
+nltk~=3.9.1
+llama-index-core~=0.12.2

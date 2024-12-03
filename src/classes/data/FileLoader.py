@@ -139,7 +139,7 @@ class FileLoader:
 
     def __load_file(self, file_id: str, file_type: str) -> str:
         """
-        Load the content of a file given its ID and type.
+        Load the content of a file given its ID and type, trying multiple encodings.
 
         :param file_id: Identifier of the file.
         :type file_id: str
@@ -150,9 +150,20 @@ class FileLoader:
         """
         file_config = self.get_file_config(file_type)
         path_to_file = os.path.join(self.__path_to_dataset, file_config["type"], f"{file_id}{file_config['ext']}")
+        encodings_to_try = ["utf8", "utf-16", "latin1", "ascii"]
+
         if os.path.exists(path_to_file):
-            with open(path_to_file, 'r', encoding="utf8") as file:
-                return file.read()
+            for encoding in encodings_to_try:
+                try:
+                    with open(path_to_file, 'r', encoding=encoding) as file:
+                        return file.read()
+                except UnicodeDecodeError:
+                    print(f"Failed to read {path_to_file} with encoding {encoding}. Trying next encoding.")
+                except Exception as e:
+                    print(f"Unexpected error while reading {path_to_file}: {e}")
+            print(f"All encoding attempts failed for file {path_to_file}.")
+        else:
+            print(f"File not found: {path_to_file}")
         return ""
 
     def get_file_content(self, group: pd.DataFrame, file_type: str) -> Optional[str]:

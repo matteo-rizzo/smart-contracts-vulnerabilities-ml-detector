@@ -13,7 +13,7 @@ subsets=("CodeSmells")
 
 # Define the scripts to run
 #scripts=("ffnn.py" "lstm.py" "codebert.py" "ml_classifiers.py", "gcn.py")
-scripts=("ml_classifiers.py")
+scripts=("lstm.py")
 
 # Export PYTHONPATH
 export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"

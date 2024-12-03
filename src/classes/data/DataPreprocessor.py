@@ -9,7 +9,7 @@ from src.classes.data.DataHandler import DataHandler
 from src.classes.data.FileContentProcessor import FileContentProcessor
 from src.classes.data.FileLoader import FileLoader
 from src.classes.data.LabelInitializer import LabelInitializer
-from src.settings import LABEL_TYPE
+from src.settings import LABEL_TYPE, DATASET_NAME
 
 
 class DataPreprocessor:
@@ -101,8 +101,9 @@ class DataPreprocessor:
         :return: Processed data and labels if graph conversion is used, None otherwise.
         :rtype: Union[None, Tuple[List[Data], List[List[int]]]]
         """
-        dataset = pd.read_csv(os.path.join(self.path_to_dataset, "new_consolidated.csv"), sep=",")
-        dataset = dataset[dataset["dataset"] == self.subset]
+        dataset = pd.read_csv(os.path.join(self.path_to_dataset, DATASET_NAME), sep=",")
+        if self.subset != "":
+            dataset = dataset[dataset["dataset"] == self.subset]
         processed_data = self._filter_and_preprocess_data(dataset)
 
         if self.file_loader.graph_converter:

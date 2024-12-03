@@ -10,7 +10,7 @@ from src.classes.data.MultimodalVectorizer import MultimodalVectorizer
 from src.classes.training.ClassBalancer import ClassBalancer
 from src.classes.training.CrossValidator import CrossValidator
 from src.classes.training.Trainer import Trainer
-from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, MAX_FEATURES
+from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, MAX_FEATURES, USE_CLASS_WEIGHTS
 from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
 MULTIMODAL = False
@@ -60,7 +60,7 @@ def main(config: Dict):
     )
 
     print("Starting k-fold cross-validation...")
-    cross_validator.k_fold_cv(log_id="ffnn", log_dir=config["log_dir"])
+    cross_validator.k_fold_cv(log_id="ffnn", log_dir=config["log_dir"], use_class_weights=config["use_class_weights"])
 
 
 if __name__ == '__main__':
@@ -71,6 +71,7 @@ if __name__ == '__main__':
     parser.add_argument("--num_epochs", type=int, default=NUM_EPOCHS, help="Number of epochs")
     parser.add_argument("--learning_rate", type=float, default=LR, help="Learning rate")
     parser.add_argument("--multimodal", type=bool, default=MULTIMODAL, help="Process multiple modalities at once")
+    parser.add_argument("--use_class_weights", type=bool, default=USE_CLASS_WEIGHTS, help="Use class weights")
 
     # Parse command-line arguments
     args = parser.parse_args()
