@@ -1,7 +1,11 @@
 import os
 import warnings
 
+import nltk
 import torch
+
+nltk.download('punkt_tab')
+nltk.download('averaged_perceptron_tagger_eng')
 
 
 def warn(*args, **kwargs):
@@ -10,16 +14,14 @@ def warn(*args, **kwargs):
 
 warnings.warn = warn
 
-"""
-CGT Repo and Paper: <https://github.com/gsalzer/cgt?tab=readme-ov-file>
-"""
-
 # Set the device for torch (use GPU if available)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Running on device {DEVICE}")
 
-# Default configuration constants
+# Reproducibility
 RANDOM_SEED = 0
+
+# Default configuration constants
 PATH_TO_DATASET = os.path.join("dataset", "manually-verified")
 DATASET_NAME = "manually_verified.csv"
 MAX_FEATURES = 128
@@ -33,3 +35,7 @@ TEST_SIZE = 0.1
 FILE_TYPE = "source"
 SUBSET = ""
 LABEL_TYPE = "property"
+
+# Explainability
+LLM_MODE = "azure"
+EMBEDDING_MODE = "local"
