@@ -18,7 +18,7 @@ Settings.embed_model = ModelManager().get_embedding_model(EMBEDDING_MODE)
 
 logger = DebugLogger()
 
-eval_prompt = """
+EVAL_PROMPT = """
 
 You must follow these steps:
 
@@ -54,18 +54,6 @@ You must follow these steps:
 {
   "classification": "Reentrant / Non-Reentrant",
   "justification": "Provide a detailed explanation of your reasoning.",
-  "retrieved_examples": [
-    {
-      "contract_snippet": "Relevant Solidity contract code or fragment.",
-      "label": "Reentrant / Non-Reentrant",
-      "explanation": "Why this contract is classified as such."
-    },
-    {
-      "contract_snippet": "Relevant Solidity contract code or fragment.",
-      "label": "Reentrant / Non-Reentrant",
-      "explanation": "Why this contract is classified as such."
-    }
-  ],
   "analysis": "Key observations about the target contract, including function behaviors, external calls, and state updates."
 }
 ```
@@ -75,6 +63,39 @@ Important: The output must be the JSON only.
 ---
 
 ### Input
+
+"""
+
+EXAMPLE_CONTRACT = """
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract VulnerableBank {
+    mapping(address => uint256) public balances;
+
+    // Deposit ether into the bank
+    function deposit() public payable {
+        balances[msg.sender] += msg.value;
+    }
+
+    // Withdraw ether from the bank
+    function withdraw(uint256 _amount) public {
+        require(balances[msg.sender] >= _amount, "Insufficient balance");
+        
+        // Send the amount to the caller
+        (bool sent, ) = msg.sender.call{value: _amount}("");
+        require(sent, "Failed to send Ether");
+        
+        // Update the balance
+        balances[msg.sender] -= _amount;
+    }
+
+    // Get the contract's balance
+    function getBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+}
 
 """
 
@@ -109,7 +130,7 @@ def evaluate(path_to_contracts, rag):
                 contract_content = file.read()
 
             # Query the RAG system
-            answer = rag.query(eval_prompt + contract_content)
+            answer = rag.query(EVAL_PROMPT + contract_content)
             sources = rag.fetch_sources(answer.source_nodes)
 
             logger.debug(f"[{index}/{total_files}] Processing file: {filename}")
@@ -146,19 +167,24 @@ def main():
     rag = VectorRAG()
 
     path_to_data_train = os.path.join("dataset", "manually-verified-preprocessed-train", "source")
-    path_to_data_test = os.path.join("dataset", "manually-verified-preprocessed-test", "source")
 
     path_to_train_reentrant = os.path.join(path_to_data_train, "reentrant")
-    rag.load_and_index_documents(path_to_train_reentrant)
+    rag.load_and_index_documents(path_to_train_reentrant, reload_index=True)
 
     path_to_train_safe = os.path.join(path_to_data_train, "safe")
-    rag.load_and_index_documents(path_to_train_safe)
+    rag.load_and_index_documents(path_to_train_safe, reload_index=True)
 
-    path_to_test_reentrant = os.path.join(path_to_data_test, "reentrant")
-    evaluate(path_to_test_reentrant, rag)
+    # path_to_data_test = os.path.join("dataset", "manually-verified-preprocessed-test", "source")
+    #
+    # path_to_test_reentrant = os.path.join(path_to_data_test, "reentrant")
+    # evaluate(path_to_test_reentrant, rag)
+    #
+    # path_to_test_safe = os.path.join(path_to_data_test, "safe")
+    # evaluate(path_to_test_safe, rag)
 
-    path_to_test_safe = os.path.join(path_to_data_test, "safe")
-    evaluate(path_to_test_safe, rag)
+    answer = rag.query(EVAL_PROMPT + EXAMPLE_CONTRACT)
+    sources = rag.fetch_sources(answer.source_nodes)
+    logger.info(f"\n\n *** ANSWER *** \n\n {answer} \n\n SOURCES: {sources} \n\n")
 
 
 if __name__ == "__main__":

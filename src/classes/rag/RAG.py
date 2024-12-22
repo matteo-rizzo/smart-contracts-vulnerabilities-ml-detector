@@ -64,12 +64,10 @@ class RAG:
         :return: List of loaded Document objects.
         """
         category = folder_path.split(os.sep)[-1]
-        metadata_fn = lambda x: {"filename": x.split(os.sep)[-1], "category": category}
+        metadata_fn = lambda x: {"file_name": x.split(os.sep)[-1], "category": category}
         reader = SimpleDirectoryReader(input_dir=folder_path, errors="strict", encoding="latin-1",
                                        file_metadata=metadata_fn)
         docs = reader.load_data(show_progress=True)
-        for doc in docs:
-            print(doc)
         return docs
 
     @DebugLogger.profile

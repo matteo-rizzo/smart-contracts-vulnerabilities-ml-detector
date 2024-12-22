@@ -7,6 +7,4 @@ class UnstructuredTransform(TransformComponent):
     def __call__(self, docs, **kwargs):
         pipeline = IngestionPipeline(transformations=[SimpleFileNodeParser()])
         base_nodes = pipeline.run(documents=docs, show_progress=True)
-        for node in base_nodes:
-            print(node)
         return base_nodes

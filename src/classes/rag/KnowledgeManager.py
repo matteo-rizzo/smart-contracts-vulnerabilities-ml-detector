@@ -114,7 +114,7 @@ class KnowledgeManager(ABC):
         try:
             return self.chat_engine.chat(query)
         except Exception as e:
-            self.logger.error("Query execution failed:", exc_info=True)
+            self.logger.error(f"Query execution failed: {e}", exc_info=True)
             return None
 
     @abstractmethod
