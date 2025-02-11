@@ -105,8 +105,8 @@ def save_all_datasets(dataset_data, output_dir):
 
 
 def main():
-    root_dir = 'log_swc'
-    output_dir = 'results_swc'
+    root_dir = 'log_property'
+    output_dir = 'results_property'
 
     create_directory(output_dir)
     dataset_data = process_directories(root_dir)

@@ -37,5 +37,5 @@ SUBSET = ""
 LABEL_TYPE = "property"
 
 # Explainability
-LLM_MODE = "azure"
+LLM_MODE = "openai"
 EMBEDDING_MODE = "local"

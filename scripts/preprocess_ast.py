@@ -108,8 +108,8 @@ def preprocess_files(input_dir, output_dir):
 
 if __name__ == "__main__":
     # Define the input and output directories
-    input_directory = "dataset/cgt/ast"  # Path to the directory containing the saved JSON files
-    output_directory = "dataset/cgt/ast_preprocessed"  # Path to the directory to save the preprocessed JSON files
+    input_directory = "dataset/manually-verified-train/ast-raw"  # Path to the directory containing the saved JSON files
+    output_directory = "dataset/manually-verified-train/ast-preprocessed"  # Path to the directory to save the preprocessed JSON files
 
     # Check if the input directory exists
     if not os.path.exists(input_directory):

@@ -3,7 +3,6 @@ from typing import Optional, List
 
 from llama_index.core import Document, SimpleDirectoryReader, Response
 from llama_index.core.postprocessor import SimilarityPostprocessor
-from llama_index.core.query_engine import RetrieverQueryEngine
 from llama_index.core.schema import NodeWithScore
 
 from src.classes.rag.Neo4jDBManager import Neo4jDBManager
@@ -97,11 +96,6 @@ class RAG:
         except Exception as e:
             self.logger.error(f"Failed to initialize chat engine: {e}", exc_info=True)
 
-    def as_chat_engine(self) -> RetrieverQueryEngine:
-        if not self.chat_engine:
-            self._initialize_chat_engine()
-        return self.chat_engine
-
     @DebugLogger.profile
     def query(self, question: str) -> Optional[Response]:
         """
@@ -130,6 +124,17 @@ class RAG:
         :param nodes: List of nodes from the query response.
         :return: List of unique filenames from filtered nodes.
         """
-        processor = SimilarityPostprocessor(similarity_cutoff=0.75)
+        processor = SimilarityPostprocessor(similarity_cutoff=0.5)
         filtered_nodes = processor.postprocess_nodes(nodes)
         return list({node.node.metadata["file_name"] for node in filtered_nodes if "file_name" in node.node.metadata})
+
+    @staticmethod
+    def fetch_source_nodes(nodes: List[NodeWithScore]) -> List[NodeWithScore]:
+        """
+        Filters nodes by similarity score and extracts unique source filenames.
+
+        :param nodes: List of nodes from the query response.
+        :return: List of unique filenames from filtered nodes.
+        """
+        processor = SimilarityPostprocessor(similarity_cutoff=0.5)
+        return processor.postprocess_nodes(nodes)

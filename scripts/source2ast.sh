@@ -26,10 +26,10 @@ Dependencies:
 END_COMMENT
 
 # Base directory containing subfolders with Solidity contracts
-BASE_DIR="dataset/cgt/source"
+BASE_DIR="dataset/manually-verified-train"
 
 # Base output directory for ASTs
-OUTPUT_BASE_DIR="dataset/cgt/ast"
+OUTPUT_BASE_DIR="dataset/manually-verified-train"
 
 # Default solc version to use if no pragma is specified or if single compiler mode is selected
 DEFAULT_SOLC_VERSION="0.8.6"
@@ -96,7 +96,6 @@ check_and_install_solc_version() {
         solc-select install "$version"
         if [ $? -ne 0 ]; then
             echo "Error: Failed to install solc version $version. Please install it manually."
-            exit 1
         fi
     fi
 }

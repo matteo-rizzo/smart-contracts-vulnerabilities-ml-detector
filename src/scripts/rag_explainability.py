@@ -19,32 +19,20 @@ Settings.embed_model = ModelManager().get_embedding_model(EMBEDDING_MODE)
 logger = DebugLogger()
 
 EVAL_PROMPT = """
+You must follow these steps precisely to evaluate the target Solidity contract, which is provided in AST (Abstract Syntax Tree) format:
 
-You must follow these steps:
+2. **Classify the Contract**:
+   Based on the retrieved context:
+   - Classify the contract as **Reentrant** if it contains patterns or vulnerabilities matching reentrant behavior.
+   - Classify the contract as **Safe** if it implements proper safeguards or mitigations that align with non-reentrant behavior.
 
-1. **Retrieve Examples**:
-   Search your knowledge base for relevant examples of Solidity smart contracts labeled as **reentrant** or **non-reentrant**. Focus on:
-   - Contracts with **reentrancy vulnerabilities**, such as making external calls (`call`, `delegatecall`, `transfer`) before updating state variables.
-   - Contracts that use **mitigations** like the *checks-effects-interactions* pattern, `ReentrancyGuard` modifiers, or mutex locks.
+3. **Justify the Classification with Cited Evidence**:
+   - Provide a detailed explanation for the classification, comparing the patterns observed in the input contract's AST with those in the retrieved context.
+   - Cite sources explicitly, referring to the relevant knowledge base entries used to form the reasoning.
+   - Highlight specific AST nodes, lines, or functions in the target contract that led to the classification decision.
 
-   Provide **contract snippets** and **explanations** of why these examples were labeled as reentrant or non-reentrant.
-
-2. **Analyze the Target Contract**:
-   Carefully analyze the **input Solidity contract** to identify:
-   - Use of external calls (`msg.sender.call`, `delegatecall`, `send`, etc.).
-   - Whether state variables are updated **before** or **after** the external call.
-   - Reentrancy mitigations like `ReentrancyGuard` modifiers or the *checks-effects-interactions* pattern.
-
-3. **Classify**:
-   Based on the retrieved examples and your analysis, classify the target contract as:
-   - **Reentrant**: If it contains vulnerabilities that allow external calls before updating state variables.
-   - **Non-Reentrant**: If it uses proper safeguards or patterns to prevent reentrancy.
-
-4. **Justify the Classification**:
-   Explain your reasoning in detail. Compare the patterns you observed in the target contract with the retrieved examples. Highlight specific lines or functions that led to your conclusion.
-
-5. **Output**:
-   Return the result in the following structured JSON format:
+4. **Structured Output**:
+   Return the classification result in the following strict JSON format:
 
 ---
 
@@ -52,139 +40,171 @@ You must follow these steps:
 
 ```json
 {
-  "classification": "Reentrant / Non-Reentrant",
-  "justification": "Provide a detailed explanation of your reasoning.",
-  "analysis": "Key observations about the target contract, including function behaviors, external calls, and state updates."
+  "classification": "Reentrant / Safe",
+  "analysis": "Key observations about the input contract's AST, including specific nodes, functions, external calls, and state update sequences."
 }
 ```
 
-Important: The output must be the JSON only.
+### Rules:
+- Only use the information from the context for classification and justification.
+- Do not make assumptions beyond the retrieved context.
+- Ensure all cited sources are detailed and verifiable.
 
----
-
-### Input
-
-"""
-
-EXAMPLE_CONTRACT = """
-
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract VulnerableBank {
-    mapping(address => uint256) public balances;
-
-    // Deposit ether into the bank
-    function deposit() public payable {
-        balances[msg.sender] += msg.value;
-    }
-
-    // Withdraw ether from the bank
-    function withdraw(uint256 _amount) public {
-        require(balances[msg.sender] >= _amount, "Insufficient balance");
-        
-        // Send the amount to the caller
-        (bool sent, ) = msg.sender.call{value: _amount}("");
-        require(sent, "Failed to send Ether");
-        
-        // Update the balance
-        balances[msg.sender] -= _amount;
-    }
-
-    // Get the contract's balance
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
-    }
-}
+### Input Contract (in AST format)
 
 """
 
 
-def evaluate(path_to_contracts, rag):
-    """ Tests the RAG model's ability to classify Solidity contracts in a directory. """
-    correct = 0
+def evaluate(path_to_contracts: str, rag: "VectorRAG") -> None:
+    """
+    Tests the RAG model's ability to classify Solidity contracts in a directory.
 
-    # Extract ground truth category from the path
-    gt_category = os.path.basename(path_to_contracts)
+    Parameters:
+        path_to_contracts (str): Directory containing Solidity (.sol) contract files.
+        rag (VectorRAG): An instance of the RAG model used for querying and fetching sources.
+    """
+    if not os.path.isdir(path_to_contracts):
+        logger.error(f"Directory not found: {path_to_contracts}")
+        return
+
+    # Extract the ground truth category from the directory name (handles trailing slashes)
+    gt_category = os.path.basename(os.path.normpath(path_to_contracts))
 
     # Create a unique log directory
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    path_to_log = os.path.join("log", f"test_{gt_category}_{timestamp}")
-    os.makedirs(path_to_log, exist_ok=True)
+    log_dir = os.path.join("log", f"test_{gt_category}_{timestamp}")
+    os.makedirs(log_dir, exist_ok=True)
 
-    # Cache list of files to avoid multiple os.listdir calls
-    files = [f for f in os.listdir(path_to_contracts)
-             if f.endswith(".sol") and os.path.isfile(os.path.join(path_to_contracts, f))]
+    # Get list of Solidity files in the directory (sorted for consistency)
+    files = sorted(
+        f for f in os.listdir(path_to_contracts)
+        if f.endswith(".ast.json") and os.path.isfile(os.path.join(path_to_contracts, f))
+    )
     total_files = len(files)
 
+    if total_files == 0:
+        logger.warning(f"No Solidity (.sol) files found in {path_to_contracts}.")
+        return
+
     logger.info(f"Testing RAG model on {total_files} files from category: {gt_category}")
-    logger.info(f"Results will be logged in: {path_to_log}")
+    logger.info(f"Results will be logged in: {log_dir}")
 
-    for index, filename in enumerate(files, start=48):
+    # Initialize ModelManager and LLM once outside the loop
+    model_manager = ModelManager()
+    llm = model_manager.get_llm(LLM_MODE)
+
+    correct = 0
+    for index, filename in enumerate(files, start=1):
+        path_to_file = os.path.join(path_to_contracts, filename)
         try:
-            # Build the full path to the file
-            path_to_file = os.path.join(path_to_contracts, filename)
-
-            # Read contract content
             with open(path_to_file, 'r', encoding='latin-1') as file:
                 contract_content = file.read()
+        except Exception as e:
+            logger.error(f"Error reading file {path_to_file}: {e}")
+            continue
 
-            # Query the RAG system
+        logger.debug(f"[{index}/{total_files}] Processing file: {filename}")
+
+        try:
+            # Query the RAG system by combining the evaluation prompt with the contract content
             answer = rag.query(EVAL_PROMPT + contract_content)
             sources = rag.fetch_sources(answer.source_nodes)
+            source_nodes = rag.fetch_source_nodes(answer.source_nodes)
+        except Exception as e:
+            logger.error(f"Error querying RAG system for file {filename}: {e}")
+            continue
 
-            logger.debug(f"[{index}/{total_files}] Processing file: {filename}")
-            logger.debug(f"*** ANSWER ***:\n{answer}\n --> SOURCES: {sources}")
+        logger.debug(f"*** ANSWER ***:\n{answer}")
+        logger.debug(f"*** SOURCES ***: {sources}")
 
-            # Extract and parse JSON from the answer
+        try:
             json_answer = extract_and_parse_json(str(answer))
-
-            # Write the JSON output to a file
-            output_path = os.path.join(path_to_log, f"{filename}.json")
-            with open(output_path, 'w', encoding='utf-8') as output_file:
-                json.dump(json_answer, output_file, indent=4)
-
-            # Check classification accuracy
-            if json_answer.get("classification") == gt_category:
-                correct += 1
-
-        except FileNotFoundError:
-            logger.error(f"File not found: {path_to_file}")
         except json.JSONDecodeError as e:
             logger.error(f"Error decoding JSON for file {filename}: {e}")
+            continue
+
+        label = json_answer.get("classification", "").strip()
+        if not label:
+            logger.error(f"No classification label found in JSON answer for file {filename}")
+            continue
+
+        # Build the explainability prompt
+        retrieved_contracts = [
+            (node.text, node.metadata.get('category', 'unknown')) for node in source_nodes
+        ]
+        explainability_prompt = (
+            "Given:\n"
+            "  1. An input smart contract provided in AST (Abstract Syntax Tree) format\n"
+            "  2. Some similar contracts retrieved by a RAG system and their labels\n"
+            "  3. The classification of the contract as reentrant or safe\n"
+            "Provide a detailed explanation of why the smart contract was classified as such.\n"
+            "When formulating your explanation, refer explicitly to the AST nodes, functions, and other relevant structural elements that led to the classification.\n"
+            f"Input contract (AST format) classified as {label}:\n{contract_content}\n"
+            f"Retrieved contracts: {retrieved_contracts}\n"
+        )
+
+        try:
+            explanation = str(llm.complete(explainability_prompt))
         except Exception as e:
-            logger.error(f"An error occurred processing {filename}: {e}")
+            logger.error(f"Error generating explanation for file {filename}: {e}")
+            explanation = "Explanation generation failed."
 
-    # Calculate accuracy
-    accuracy = correct / total_files if total_files > 0 else 0
-    logger.info(f"Classification Accuracy for '{gt_category}': {accuracy:.2%}")
+        logger.debug(f"*** EXPLANATION ***:{explanation}")
 
-    # Summary log
-    print(f"Processed {total_files} files. Accuracy: {accuracy:.2%}")
+        # Add the sources and explanation to the JSON answer
+        json_answer["sources"] = sources
+        json_answer["explanation"] = explanation
+
+        # Write the JSON output to a file in the log directory
+        output_path = os.path.join(log_dir, f"{filename}.json")
+        try:
+            with open(output_path, 'w', encoding='utf-8') as output_file:
+                json.dump(json_answer, output_file, indent=4)
+        except Exception as e:
+            logger.error(f"Error writing output file {output_path}: {e}")
+
+        # Check classification accuracy (using case-insensitive comparison)
+        if label.lower() == gt_category.lower():
+            correct += 1
+
+        running_accuracy = correct / index
+        logger.info(f"Processed {index}/{total_files} files. Running accuracy: {running_accuracy:.2%}")
+
+    accuracy = correct / total_files
+    logger.info(f"Final classification accuracy for '{gt_category}': {accuracy:.2%}")
+    logger.debug(f"Processed {total_files} files. Final Accuracy: {accuracy:.2%}")
 
 
-def main():
-    rag = VectorRAG()
+def main() -> None:
+    """
+    Main function to initialize the RAG system, load training documents,
+    and evaluate the test datasets.
+    """
+    try:
+        rag = VectorRAG()
+    except Exception as e:
+        logger.error(f"Error initializing VectorRAG: {e}")
+        return
 
-    path_to_data_train = os.path.join("dataset", "manually-verified-preprocessed-train", "source")
-
+    # Load training documents for the 'reentrant' and 'safe' categories
+    path_to_data_train = os.path.join("dataset", "manually-verified-train", "ast")
     path_to_train_reentrant = os.path.join(path_to_data_train, "reentrant")
-    rag.load_and_index_documents(path_to_train_reentrant, reload_index=True)
-
     path_to_train_safe = os.path.join(path_to_data_train, "safe")
-    rag.load_and_index_documents(path_to_train_safe, reload_index=True)
 
-    # path_to_data_test = os.path.join("dataset", "manually-verified-preprocessed-test", "source")
-    #
-    # path_to_test_reentrant = os.path.join(path_to_data_test, "reentrant")
-    # evaluate(path_to_test_reentrant, rag)
-    #
-    # path_to_test_safe = os.path.join(path_to_data_test, "safe")
-    # evaluate(path_to_test_safe, rag)
+    try:
+        rag.load_and_index_documents(path_to_train_reentrant, reload_index=True)
+        rag.load_and_index_documents(path_to_train_safe, reload_index=True)
+    except Exception as e:
+        logger.error(f"Error loading and indexing training documents: {e}")
+        return
 
-    answer = rag.query(EVAL_PROMPT + EXAMPLE_CONTRACT)
-    sources = rag.fetch_sources(answer.source_nodes)
-    logger.info(f"\n\n *** ANSWER *** \n\n {answer} \n\n SOURCES: {sources} \n\n")
+    # Evaluate the model on the test datasets for both categories
+    path_to_data_test = os.path.join("dataset", "manually-verified-test", "ast")
+    path_to_test_reentrant = os.path.join(path_to_data_test, "reentrant")
+    path_to_test_safe = os.path.join(path_to_data_test, "safe")
+
+    evaluate(path_to_test_reentrant, rag)
+    evaluate(path_to_test_safe, rag)
 
 
 if __name__ == "__main__":
