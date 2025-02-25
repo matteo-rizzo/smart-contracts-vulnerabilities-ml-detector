@@ -56,3 +56,8 @@ llama-index-llms-openai==0.3.17
 llama-index-vector-stores-neo4jvector==0.3.0
 llama-index-extractors-entity==0.3.1
 llama-index-tools-neo4j==0.3.0
+
+torch-geometric~=2.6.0
+pydantic~=2.10.6
+zss~=1.2.0
+openai~=1.61.0

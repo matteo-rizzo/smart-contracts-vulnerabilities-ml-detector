@@ -3,11 +3,11 @@ from typing import Optional, List
 
 from llama_index.core import StorageContext, Document
 from llama_index.core.chat_engine.types import BaseChatEngine, AgentChatResponse
-from llama_index.core.graph_stores import PropertyGraphStore
 from llama_index.core.indices.base import BaseIndex
+from llama_index.core.vector_stores.types import VectorStore
 
-from src.classes.rag.UnstructuredTransform import UnstructuredTransform
 from src.classes.utils.DebugLogger import DebugLogger
+from src.classes.xrag_vector.UnstructuredTransform import UnstructuredTransform
 
 
 class KnowledgeManager(ABC):
@@ -16,7 +16,7 @@ class KnowledgeManager(ABC):
     Provides methods for indexing documents, creating a chat engine, and executing queries.
     """
 
-    def __init__(self, store: PropertyGraphStore, storage_context: StorageContext) -> None:
+    def __init__(self, store: VectorStore, storage_context: StorageContext) -> None:
         """
         Initialize the KnowledgeManager with a store and storage context.
 

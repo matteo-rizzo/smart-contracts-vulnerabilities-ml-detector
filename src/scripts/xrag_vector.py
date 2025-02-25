@@ -4,10 +4,10 @@ import time
 
 from llama_index.core import Settings
 
-from src.classes.rag.ModelManager import ModelManager
-from src.classes.rag.VectorRAG import VectorRAG
 from src.classes.utils.DebugLogger import DebugLogger
 from src.classes.utils.EnvLoader import EnvLoader
+from src.classes.xrag_vector.ModelManager import ModelManager
+from src.classes.xrag_vector.VectorRAG import VectorRAG
 from src.functions.utils import extract_and_parse_json
 from src.settings import LLM_MODE, EMBEDDING_MODE
 

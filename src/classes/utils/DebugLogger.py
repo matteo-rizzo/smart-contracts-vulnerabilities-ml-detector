@@ -78,7 +78,7 @@ class DebugLogger:
         """
         self.log(message, level="warning")
 
-    def error(self, message: str, exc_info: bool = False):
+    def error(self, message: str, exc_info: bool = True):
         """
         Log an error message.
 

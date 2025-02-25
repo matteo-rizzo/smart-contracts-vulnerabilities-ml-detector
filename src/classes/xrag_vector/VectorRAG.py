@@ -1,7 +1,7 @@
 from llama_index.core import StorageContext
 
-from src.classes.rag.RAG import RAG
-from src.classes.rag.VectorManager import VectorManager
+from src.classes.xrag_vector.RAG import RAG
+from src.classes.xrag_vector.VectorManager import VectorManager
 
 
 class VectorRAG(RAG):

@@ -5,8 +5,8 @@ from llama_index.core import Document, SimpleDirectoryReader, Response
 from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core.schema import NodeWithScore
 
-from src.classes.rag.Neo4jDBManager import Neo4jDBManager
 from src.classes.utils.DebugLogger import DebugLogger
+from src.classes.xrag_vector.Neo4jDBManager import Neo4jDBManager
 
 
 class RAG:

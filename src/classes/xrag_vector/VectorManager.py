@@ -3,8 +3,8 @@ from typing import List
 from llama_index.core import StorageContext, Document, VectorStoreIndex
 from llama_index.core.vector_stores.types import VectorStore
 
-from src.classes.rag.KnowledgeManager import KnowledgeManager
-from src.classes.rag.UnstructuredTransform import UnstructuredTransform
+from src.classes.xrag_vector.KnowledgeManager import KnowledgeManager
+from src.classes.xrag_vector.UnstructuredTransform import UnstructuredTransform
 
 
 class VectorManager(KnowledgeManager):
