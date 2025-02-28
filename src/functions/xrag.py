@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Tuple, Optional, List
 
 from src.classes.utils.DebugLogger import DebugLogger
 from src.classes.xrag.ContractFileProcessor import ContractFileProcessor
 from src.classes.xrag.Document import Document
 from src.classes.xrag.LLMHandler import LLMHandler
+from src.classes.xrag.Retriever import Retriever
 
 
 def _save_json(file_path: Path, data: Dict[str, Any], logger: DebugLogger) -> None:
@@ -17,8 +18,8 @@ def _save_json(file_path: Path, data: Dict[str, Any], logger: DebugLogger) -> No
     :param logger: Logger instance for logging errors.
     """
     try:
-        with open(file_path, "w") as f:
-            json.dump(data, f, indent=2)
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
         logger.info(f"Results saved: {file_path}")
     except IOError as e:
         logger.error(f"Failed to save results to {file_path}: {e}")
@@ -34,95 +35,106 @@ def process_input_contract_worker(args: Tuple) -> Optional[str]:
     """
     logger = DebugLogger()
 
-    (
-        input_doc,
-        input_doc_metadata,
-        input_dirs,
-        candidate_dirs,
-        log_dir,
-        retriever_docs,
-    ) = args
-
-    contract_id = input_doc_metadata.get("contract_id", "unknown").split(".")[0]
-    label = input_doc_metadata.get("label", "unknown")
-
-    logger.info(f"Processing contract: {contract_id} (Label: {label})")
-
-    # Load source code
     try:
+        (
+            input_doc,
+            retriever_docs_data,
+            input_dirs,
+            candidate_dirs,
+            log_dir,
+            mode,
+        ) = args
+
+        input_doc = Document.from_dict(input_doc)
+        contract_id = input_doc.metadata.get("contract_id", "unknown").split(".")[0]
+        label = input_doc.metadata.get("label", "unknown")
+
+        logger.info(f"Processing contract: {contract_id} (Label: {label})")
+
+        # Load source code
         source_code = ContractFileProcessor.load_source_code(contract_id, input_dirs["src"], label)
         logger.debug(f"Loaded source code for contract {contract_id}.")
-    except Exception as e:
-        logger.error(f"Error loading source code for contract {contract_id}: {e}")
-        return None
 
-    # Create contract-specific log directory
-    local_log_dir = Path(log_dir) / label / contract_id
-    local_log_dir.mkdir(parents=True, exist_ok=True)
-    logger.debug(f"Created log directory: {local_log_dir}")
+        # Create contract-specific log directory
+        local_log_dir = Path(log_dir) / label / contract_id
+        local_log_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Created log directory: {local_log_dir}")
 
-    # Reconstruct similar documents
-    similar_docs = [Document.from_dict(doc) for doc in retriever_docs]
+        # Convert retriever docs from dicts to Document objects
+        retriever_docs = [Document.from_dict(doc) for doc in retriever_docs_data]
 
-    # Initialize the LLM handler
-    llm_processor = LLMHandler()
+        # Retrieve similar documents
+        retriever = Retriever(retriever_docs, similarity_mode=mode)
+        similar_docs = retriever.retrieve(input_doc, k=3)
 
-    # Retrieve similar documents and analyze
-    similar_contexts = []
-    logger.info(f"Retrieving similar documents for contract {contract_id}.")
+        # Initialize LLM handler
+        llm_processor = LLMHandler()
 
-    for doc in similar_docs[:3]:  # Limit to top 3 similar contracts
-        similar_id = doc.metadata.get("contract_id", "unknown").split(".")[0]
-        similar_label = doc.metadata.get("label", "unknown")
+        # Retrieve similar documents and analyze
+        similar_contexts: List[str] = []
+        logger.info(f"Retrieving similar documents for contract {contract_id}.")
 
+        for doc in similar_docs:
+            similar_id = doc.metadata.get("contract_id", "unknown").split(".")[0]
+            similar_label = doc.metadata.get("label", "unknown")
+
+            try:
+                similar_source_code = ContractFileProcessor.load_source_code(
+                    similar_id, candidate_dirs["src"], similar_label
+                )
+
+                # Analyze similar contract using LLM
+                analysis_response = llm_processor.analyze_similar_contract(similar_source_code, similar_label)
+
+                similar_contexts.append(
+                    f"### {similar_id} - Label {similar_label}\n#### Analysis:\n{analysis_response}\n\n"
+                )
+
+                logger.debug(f"Analyzed similar contract {similar_id} (Label: {similar_label}).")
+
+                # Save individual analysis
+                _save_json(
+                    local_log_dir / f"analysis_{similar_id}.json",
+                    {
+                        "contract_id": similar_id,
+                        "label": similar_label,
+                        "analysis": str(analysis_response),
+                    },
+                    logger,
+                )
+
+            except Exception as e:
+                logger.warning(f"Skipping similar contract {similar_id} due to error: {e}")
+
+        # Analyze the input contract using the gathered similar contexts
         try:
-            similar_source_code = ContractFileProcessor.load_source_code(similar_id, candidate_dirs["src"],
-                                                                         similar_label)
-            analysis_response = llm_processor.analyze_similar_contract(similar_source_code, similar_label)
+            response = llm_processor.analyze_contract(source_code, similar_contexts)
 
-            # Append to context
-            similar_contexts.append(
-                f"### {similar_id} - Label {similar_label}\n#### Analysis:\n{analysis_response}\n\n"
-            )
-            logger.debug(f"Analyzed similar contract {similar_id} (Label: {similar_label}).")
+            # Parse LLM response safely
+            response_data = json.loads(response.text) if isinstance(response.text, str) else response
 
-            # Save individual analysis
-            _save_json(
-                local_log_dir / f"analysis_{similar_id}.json",
-                {
-                    "contract_id": contract_id,
-                    "label": label,
-                    "analysis": str(analysis_response),
-                },
-                logger,
-            )
+            classification = response_data.get("classification", "unknown")
+            explanation = response_data.get("explanation", "No explanation provided.")
 
+            logger.info(f"Classification completed for contract {contract_id}.")
         except Exception as e:
-            logger.warning(f"Skipping similar contract {similar_id} due to error: {e}")
+            logger.error(f"Error during classification for contract {contract_id}: {e}")
+            return None
 
-    # Analyze the input contract using the gathered similar contexts
-    try:
-        response = llm_processor.analyze_contract(source_code, similar_contexts)
-        response_data = json.loads(response.text)
+        # Save final classification results
+        _save_json(
+            local_log_dir / "classification.json",
+            {
+                "contract_id": contract_id,
+                "label": label,
+                "classification": classification,
+                "explanation": explanation,
+            },
+            logger,
+        )
 
-        classification = response_data.get("classification", "unknown")
-        explanation = response_data.get("explanation", "No explanation provided.")
+        return contract_id
 
-        logger.info(f"Classification completed for contract {contract_id}.")
     except Exception as e:
-        logger.error(f"Error during classification for contract {contract_id}: {e}")
+        logger.error(f"Unexpected error in processing contract: {e}")
         return None
-
-    # Save final classification results
-    _save_json(
-        local_log_dir / "classification.json",
-        {
-            "contract_id": contract_id,
-            "label": label,
-            "classification": classification,
-            "explanation": explanation,
-        },
-        logger,
-    )
-
-    return contract_id

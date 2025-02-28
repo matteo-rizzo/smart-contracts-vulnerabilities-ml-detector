@@ -17,6 +17,7 @@ class Retriever:
         """
         self.logger = DebugLogger()
         self.documents = documents
+        self.similarity_mode = similarity_mode
         self.similarity_calculator = SimilarityCalculator(similarity_mode, weights)
 
         self.logger.info(f"Retriever initialized with {len(documents)} documents, similarity_mode='{similarity_mode}'")
@@ -30,15 +31,24 @@ class Retriever:
         :return: List of top-k most similar documents.
         """
         input_json = input_doc.metadata.get("json", {})
-        scored_docs = []
+        if self.similarity_mode != "aggregated":
+            input_json = input_json[self.similarity_mode]
 
-        for idx, doc in tqdm(enumerate(self.documents), desc="Retrieving documents"):
+        scored_docs = []
+        for doc in tqdm(self.documents, desc="Retrieving documents"):
             candidate_json = doc.metadata.get("json", {})
+            if self.similarity_mode != "aggregated":
+                candidate_json = candidate_json[self.similarity_mode]
             score = self.similarity_calculator.compute_similarity(input_json, candidate_json)
             scored_docs.append((score, doc))
 
         scored_docs.sort(key=lambda x: x[0], reverse=True)
         top_k_docs = [doc for _, doc in scored_docs[:k]]
 
-        self.logger.info(f"Retrieved top {k} documents. Scores: {[score for score, _ in scored_docs[:k]]}")
+        self.logger.info(f"Retrieved top {k} documents.")
+        for score, doc in scored_docs[:k]:
+            doc_id = doc.metadata.get("contract_id", "unknown").split(".")[0]
+            label = doc.metadata.get("label", "unknown")
+            self.logger.debug("Contract ID ({}): {} - Score {}".format(label, doc_id, score))
+
         return top_k_docs

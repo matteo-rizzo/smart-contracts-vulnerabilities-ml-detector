@@ -2,7 +2,7 @@ import glob
 import json
 import os
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 from tqdm import tqdm
 
@@ -26,39 +26,96 @@ class ContractFileProcessor:
         self.cfg_dir = cfg_dir
         self.grouped: Dict[str, Dict[str, Any]] = {}
 
-    def process_files_in_dir(self, directory: str, key: str, progress_desc: str, logger_prefix: str = "") -> None:
+    def extract_json(self, contract_id: str, label: str, directory: str, data_type: str) -> Optional[dict]:
+        """
+        Extracts JSON data (AST or CFG) for a given contract from a directory.
+
+        :param contract_id: Contract identifier.
+        :param label: Contract label.
+        :param directory: Directory containing the JSON files.
+        :param data_type: Type of data ("AST" or "CFG") for logging.
+        :return: Parsed JSON data if available, else None.
+        """
+        if not directory:
+            return None
+
+        file_ext = ".ast.json" if data_type == "AST" else "-combined.json"
+        file_path = os.path.join(directory, label, contract_id + file_ext)
+        try:
+            with open(file_path, "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            self.logger.warning(f"{data_type} file for contract {contract_id} not found.")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error loading {data_type} for {contract_id}: {e}")
+            return None
+
+    def extract_ast(self, contract_id: str, label: str) -> Optional[dict]:
+        """Extract AST JSON for a contract."""
+        return self.extract_json(contract_id, label, self.ast_dir, "AST")
+
+    def extract_cfg(self, contract_id: str, label: str) -> Optional[dict]:
+        """Extract CFG JSON for a contract."""
+        return self.extract_json(contract_id, label, self.cfg_dir, "CFG")
+
+    def process_files_in_dir(self, directory: str, key: str, progress_desc: str) -> None:
         """
         Process JSON files in a given directory and update the grouped dictionary.
 
-        :param directory: The directory to search files in (expects a structure like <label>/<file>.json).
+        :param directory: The directory to search files in.
         :param key: The key to store the loaded JSON data ("ast" or "cfg").
-        :param progress_desc: Description used for the tqdm progress bar.
-        :param logger_prefix: Prefix string for logging warnings (e.g. "Input ").
+        :param progress_desc: Description for the tqdm progress bar.
         """
         if not directory:
             return
 
-        file_paths = glob.glob(os.path.join(directory, "*", "*.json"))
-        for file_path in tqdm(file_paths, desc=progress_desc):
+        for file_path in tqdm(glob.glob(os.path.join(directory, "*", "*.json")), desc=progress_desc):
             contract_id = os.path.basename(file_path).split('.')[0].split('-')[0]
             label = os.path.basename(os.path.dirname(file_path)).lower()
 
             if contract_id not in self.grouped:
                 self.grouped[contract_id] = {"source_files": [], "ast": None, "cfg": None, "label": label}
-            else:
-                if self.grouped[contract_id]["label"] != label:
-                    self.logger.warning(
-                        f"{logger_prefix}Contract {contract_id} has conflicting labels: "
-                        f"{self.grouped[contract_id]['label']} and {label}"
-                    )
+            elif self.grouped[contract_id]["label"] != label:
+                self.logger.warning(f"Contract {contract_id} has conflicting labels: "
+                                    f"{self.grouped[contract_id]['label']} and {label}")
 
             self.grouped[contract_id]["source_files"].append(file_path)
             try:
                 with open(file_path, "r") as f:
-                    data = json.load(f)
-                self.grouped[contract_id][key] = data
+                    self.grouped[contract_id][key] = json.load(f)
             except Exception as e:
                 self.logger.error(f"Error loading {file_path}: {e}")
+
+    def group_files(self, mode: str = "aggregated", required_representations: List[str] = None) -> List[
+        Tuple[str, List[str], dict, str]]:
+        """
+        Group JSON files from AST and CFG directories by contract identifier.
+        Skips contracts that do not have the required representations.
+
+        :param mode: "aggregated", "ast", or "cfg" to control which data to include.\
+        :param required_representations: List of required representations (e.g., ["ast", "cfg"]).
+        :return: A list of tuples (contract_id, source file paths, combined JSON, label).
+        """
+        required_representations = required_representations or []
+
+        if mode in ["aggregated", "ast"] and self.ast_dir:
+            self.process_files_in_dir(self.ast_dir, "ast", "Grouping AST")
+
+        if mode in ["aggregated", "cfg"] and self.cfg_dir:
+            self.process_files_in_dir(self.cfg_dir, "cfg", "Grouping CFG")
+
+        valid_contracts = []
+        for contract_id, contents in self.grouped.items():
+            if any(contents[rep] is None for rep in required_representations):
+                self.logger.warning(
+                    f"Skipping contract {contract_id} due to missing required representations: {required_representations}")
+                continue  # Skip contracts missing required data
+
+            valid_contracts.append(
+                (contract_id, contents["source_files"], self.combine_data(contents, mode), contents["label"]))
+
+        return valid_contracts
 
     @staticmethod
     def combine_data(contents: dict, mode: str) -> dict:
@@ -66,48 +123,22 @@ class ContractFileProcessor:
         Combine AST and/or CFG data from a contract based on the mode.
 
         :param contents: Dictionary containing AST and CFG data.
-        :param mode: The mode in which data should be combined ("both", "ast", "cfg").
+        :param mode: The mode in which data should be combined ("aggregated", "ast", "cfg").
         :return: A dictionary containing the selected data.
         """
-        if mode == "both":
+        if mode == "aggregated":
             return {k: contents[k] for k in ["ast", "cfg"] if contents[k] is not None}
-        elif mode == "ast":
-            return {"ast": contents["ast"]} if contents["ast"] is not None else {}
-        elif mode == "cfg":
-            return {"cfg": contents["cfg"]} if contents["cfg"] is not None else {}
-        return {}
-
-    def group_files(self, mode: str = "both", is_input: bool = False) -> List[Tuple[str, List[str], dict, str]]:
-        """
-        Group JSON files from AST and CFG directories by contract identifier.
-
-        :param mode: "both", "ast", or "cfg" to control which data to include.
-        :param is_input: Whether the files being processed are input files (for logging purposes).
-        :return: A list of tuples (contract_id, source file paths, combined JSON, label).
-        """
-        logger_prefix = "Input " if is_input else ""
-
-        if mode in ["both", "ast"] and self.ast_dir:
-            self.process_files_in_dir(self.ast_dir, key="ast", progress_desc=f"{logger_prefix}Grouping AST")
-
-        if mode in ["both", "cfg"] and self.cfg_dir:
-            self.process_files_in_dir(self.cfg_dir, key="cfg", progress_desc=f"{logger_prefix}Grouping CFG")
-
-        results = [
-            (contract_id, contents["source_files"], self.combine_data(contents, mode), contents["label"])
-            for contract_id, contents in self.grouped.items()
-        ]
-        return results
+        return {mode: contents.get(mode)} if contents.get(mode) else {}
 
     @staticmethod
-    def load_source_code(contract_id, source_dir, label):
+    def load_source_code(contract_id, source_dir, label) -> str:
         """
-        Loads and preprocesses the Solidity source code for a given contract.
+        Loads and preprocesses Solidity source code for a given contract.
 
-        :param contract_id: ID of the contract to load.
+        :param contract_id: Contract ID.
         :param source_dir: Directory containing source code.
-        :param label: Label (e.g., 'safe', 'reentrant') for classification.
-        :return: Cleaned Solidity source code as a string.
+        :param label: Classification label.
+        :return: Cleaned Solidity source code.
         """
         source_path = os.path.join(source_dir, label, f"{contract_id}.sol")
 
@@ -121,7 +152,6 @@ class ContractFileProcessor:
             print(f"Error loading source code for contract {contract_id}: {e}")
             return ""
 
-        # Preprocess to remove comments and docstrings
         return ContractFileProcessor._clean_solidity_code(raw_code)
 
     @staticmethod
@@ -132,14 +162,7 @@ class ContractFileProcessor:
         :param code: Raw Solidity source code.
         :return: Cleaned Solidity source code.
         """
-        # Remove block comments (/* ... */)
-        code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)
-
-        # Remove single-line comments (// ...)
-        code = re.sub(r"//.*", "", code)
-
-        # Remove Solidity NatSpec comments (e.g., @notice, @dev, @param)
-        code = re.sub(r"@\w+.*", "", code)
-
-        # Trim extra whitespace and return
+        code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)  # Remove block comments
+        code = re.sub(r"//.*", "", code)  # Remove single-line comments
+        code = re.sub(r"@\w+.*", "", code)  # Remove NatSpec comments
         return "\n".join(line.rstrip() for line in code.splitlines() if line.strip())
