@@ -1,6 +1,11 @@
 # CGT Classification Project
 
-This project involves training and evaluating various machine learning models for classification tasks using the CGT dataset. The models include a BERT-based model, a Feedforward Neural Network (FFNN), an LSTM-based classifier, and a pool of traditional classifiers.
+This project involves training and evaluating various machine learning models for classification tasks using the CGT
+dataset. The models include a BERT-based model, a Feedforward Neural Network (FFNN), an LSTM-based classifier, and a
+pool of traditional classifiers.
+
+Companion workshop paper presented at OVERLAY
+2024: ["A Comparison of Machine Learning Techniques for Ethereum Smart Contract Vulnerability Detection"](https://ceur-ws.org/Vol-3904/paper15.pdf).
 
 ## Installation
 
@@ -12,7 +17,7 @@ pip install numpy pandas torch scikit-learn tqdm transformers xgboost
 
 ## Dataset
 
-The dataset used in this project is the CGT dataset, which can be found [here](https://github.com/gsalzer/cgt). 
+The dataset used in this project is the CGT dataset, which can be found [here](https://github.com/gsalzer/cgt).
 
 ### Download and Setup
 
@@ -118,7 +123,8 @@ VECTORIZER = TfidfVectorizer(max_features=MAX_FEATURES)
 
 ### BERTModelTrainer
 
-Handles training and evaluation of a BERT-based model. Uses the `transformers` library to load a BERT model for sequence classification.
+Handles training and evaluation of a BERT-based model. Uses the `transformers` library to load a BERT model for sequence
+classification.
 
 ### FFNNClassifier
 
@@ -130,7 +136,8 @@ An LSTM-based model for text classification, initialized with pretrained GloVe e
 
 ### Load GloVe Embeddings
 
-Download the GloVe embeddings from [Kaggle](https://www.kaggle.com/datasets/danielwillgeorge/glove6b100dtxt) and extract the file to the appropriate directory:
+Download the GloVe embeddings from [Kaggle](https://www.kaggle.com/datasets/danielwillgeorge/glove6b100dtxt) and extract
+the file to the appropriate directory:
 
 ```plaintext
 project_directory/
