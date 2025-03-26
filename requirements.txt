@@ -15,7 +15,7 @@ onnx==1.17.0  # Explicit version for ONNX compatibility
 
 # Deep Learning & NLP
 torch_geometric==2.6.0
-transformers==4.47.0  # Explicit version for stability
+transformers==4.48.0  # Explicit version for stability
 huggingface-hub==0.25.0  # Ensure compatible Hugging Face tools
 nltk==3.9.1
 
