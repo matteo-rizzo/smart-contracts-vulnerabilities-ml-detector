@@ -1,54 +1,64 @@
-import numpy as np
 import torch
 from torch import nn
 
 
 class LSTMClassifier(nn.Module):
-    """
-    LSTM Classifier for text classification.
-    """
-
-    def __init__(self, vocab_size: int, embedding_dim: int, hidden_dim: int, pretrained_embeddings: np.ndarray,
-                 output_size: int):
+    def __init__(self, embedding_dim, hidden_dim, output_dim, num_layers=1, dropout=0.5, pooling="avg_max"):
         """
-        Initialize the LSTM Classifier.
+        Optimized LSTM classifier with bidirectional LSTM, dropout, and combined average and max pooling.
 
-        :param vocab_size: Size of the vocabulary.
-        :param embedding_dim: Dimension of the embedding vectors.
-        :param hidden_dim: Dimension of the hidden layer.
-        :param pretrained_embeddings: Pretrained embeddings to initialize the embedding layer.
-        :param output_size: Number of output classes.
+        :param embedding_dim: Dimension of input embeddings.
+        :param hidden_dim: Number of hidden units in one LSTM direction.
+        :param output_dim: Number of output classes.
+        :param num_layers: Number of LSTM layers.
+        :param dropout: Dropout rate applied to the pooled representation.
+        :param pooling: Pooling strategy; "avg_max" uses both average and max pooling,
+                        any other value will use average pooling only.
         """
         super(LSTMClassifier, self).__init__()
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout if num_layers > 1 else 0.0
+        )
+        self.dropout = nn.Dropout(dropout)
+        self.pooling = pooling
 
-        # Embedding layer initialized with pretrained embeddings
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.embedding.weight = nn.Parameter(torch.tensor(pretrained_embeddings, dtype=torch.float32))
-        self.embedding.weight.requires_grad = True  # Set to False to freeze embeddings
+        if self.pooling == "avg_max":
+            # Bidirectional: hidden_dim * 2, then concatenated average and max pooling gives hidden_dim * 4.
+            fc_input_dim = hidden_dim * 4
+        else:
+            fc_input_dim = hidden_dim * 2
 
-        # LSTM layer
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True)
+        self.fc = nn.Linear(fc_input_dim, output_dim)
 
-        # Fully connected output layer
-        self.fc = nn.Linear(hidden_dim, output_size)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x, lengths=None):
         """
-        Forward pass through the LSTM Classifier.
+        Forward pass of the LSTM classifier.
 
-        :param x: Input tensor.
-        :return: Output tensor after passing through the LSTM and fully connected layers.
+        :param x: Tensor of shape [batch, seq_len, embedding_dim].
+        :param lengths: Optional 1D tensor or list of actual sequence lengths for each sample in the batch.
+        :return: Output logits of shape [batch, output_dim].
         """
-        # Convert input to embeddings
-        embedded = self.embedding(x.long())
+        # If sequence lengths are provided, pack the padded sequence for improved efficiency.
+        if lengths is not None:
+            packed_x = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+            packed_out, _ = self.lstm(packed_x)
+            lstm_out, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
+        else:
+            lstm_out, _ = self.lstm(x)
 
-        # Pass embeddings through LSTM
-        _, (hidden, _) = self.lstm(embedded)
+        if self.pooling == "avg_max":
+            # Compute average and max pooling along the sequence dimension.
+            avg_pool = torch.mean(lstm_out, dim=1)
+            max_pool, _ = torch.max(lstm_out, dim=1)
+            pooled = torch.cat((avg_pool, max_pool), dim=1)
+        else:
+            pooled = torch.mean(lstm_out, dim=1)
 
-        # Use the last hidden state for classification
-        hidden = hidden[-1]
-
-        # Pass the last hidden state through the fully connected layer
-        output = self.fc(hidden)
-
+        pooled = self.dropout(pooled)
+        output = self.fc(pooled)
         return output

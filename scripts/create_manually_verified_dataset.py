@@ -17,17 +17,15 @@ logger = logging.getLogger("rich")
 class ContractProcessor:
     """Class to process Solidity contracts for reentrancy checks."""
 
-    def __init__(self, folder_path, dataset_label, modalities):
+    def __init__(self, folder_path, dataset_label):
         """
         Initialize ContractProcessor.
 
         :param folder_path: Path to the folder containing Solidity contracts.
         :param dataset_label: Label for the dataset ('reentrant' or 'safe').
-        :param modalities: Dictionary mapping modality names to their folder paths.
         """
         self.folder_path = folder_path
         self.dataset_label = dataset_label
-        self.modalities = modalities
 
     def process_files(self):
         """
@@ -74,18 +72,16 @@ class ContractProcessor:
 class ManuallyVerifiedGenerator:
     """Main class to orchestrate the dataset building process."""
 
-    def __init__(self, reentrant_dir, safe_dir, modalities, output_csv):
+    def __init__(self, reentrant_dir, safe_dir, output_csv):
         """
         Initialize the dataset builder.
 
         :param reentrant_dir: Path to the folder containing reentrant contracts.
         :param safe_dir: Path to the folder containing safe contracts.
-        :param modalities: Dictionary mapping modality names to their folder paths.
         :param output_csv: Path to the output CSV file.
         """
         self.reentrant_dir = reentrant_dir
         self.safe_dir = safe_dir
-        self.modalities = modalities
         self.output_csv = output_csv
         self.fieldnames = [
             "dataset", "id", "property", "property_holds", "chain", "addr",
@@ -114,10 +110,10 @@ class ManuallyVerifiedGenerator:
         all_rows = []
 
         logger.info("Processing reentrant contracts...")
-        all_rows.extend(ContractProcessor(self.reentrant_dir, "reentrant", self.modalities).process_files())
+        all_rows.extend(ContractProcessor(self.reentrant_dir, "reentrant").process_files())
 
         logger.info("Processing safe contracts...")
-        all_rows.extend(ContractProcessor(self.safe_dir, "safe", self.modalities).process_files())
+        all_rows.extend(ContractProcessor(self.safe_dir, "safe").process_files())
 
         logger.info("Writing data to CSV...")
         self.write_to_csv(all_rows)
@@ -125,13 +121,9 @@ class ManuallyVerifiedGenerator:
 
 if __name__ == "__main__":
     # Paths to your dataset folders
-    REENTRANT_DIR = os.path.join("dataset", "manually-verified", "source", "reentrant")
-    SAFE_DIR = os.path.join("dataset", "manually-verified", "source", "safe")
-    MODALITIES = {
-        "bytecode": os.path.join("dataset", "manually-verified", "bytecode"),
-        "runtime": os.path.join("dataset", "manually-verified", "runtime"),
-    }
+    REENTRANT_DIR = os.path.join("..", "dataset", "manually-verified", "source", "reentrant")
+    SAFE_DIR = os.path.join("..", "dataset", "manually-verified", "source", "safe")
     OUTPUT_CSV = "manually_verified.csv"
 
-    dataset_builder = ManuallyVerifiedGenerator(REENTRANT_DIR, SAFE_DIR, MODALITIES, OUTPUT_CSV)
+    dataset_builder = ManuallyVerifiedGenerator(REENTRANT_DIR, SAFE_DIR, OUTPUT_CSV)
     dataset_builder.build_dataset()

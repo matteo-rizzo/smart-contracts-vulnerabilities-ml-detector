@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset
 from transformers import RobertaForSequenceClassification, RobertaTokenizer
 
 from src.classes.data.DataPreprocessor import DataPreprocessor
-from src.classes.training.BertModelTrainer import BERTModelTrainer
+from src.classes.training.BERTModelTrainer import BERTModelTrainer
 from src.classes.training.ClassBalancer import ClassBalancer
 from src.classes.training.CrossValidator import CrossValidator
 from src.settings import BATCH_SIZE, NUM_EPOCHS, LR, DEVICE
@@ -32,7 +32,7 @@ def main(config: Dict):
     labels = preprocessor.get_labels()
 
     print("Initializing RobertaTokenizer...")
-    tokenizer = RobertaTokenizer.from_pretrained(config['bert_model_type'], ignore_mismatched_sizes=True)
+    tokenizer = RobertaTokenizer.from_pretrained(config['bert_model_type'], ignore_mismatched_sizes=True, use_fast=True)
 
     print("Tokenizing inputs...")
     x, y = tokenizer(

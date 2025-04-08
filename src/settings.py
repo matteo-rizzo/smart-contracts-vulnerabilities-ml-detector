@@ -1,11 +1,7 @@
 import os
 import warnings
 
-import nltk
 import torch
-
-nltk.download('punkt_tab')
-nltk.download('averaged_perceptron_tagger_eng')
 
 
 def warn(*args, **kwargs):
@@ -35,7 +31,3 @@ TEST_SIZE = 0.1
 FILE_TYPE = "source"
 SUBSET = ""
 LABEL_TYPE = "property"
-
-# Explainability
-LLM_MODE = "openai"
-EMBEDDING_MODE = "local"

@@ -1,5 +1,6 @@
 from typing import Dict
 
+import nltk
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
@@ -14,8 +15,12 @@ from src.classes.data.MultimodalVectorizer import MultimodalVectorizer
 from src.settings import MAX_FEATURES, DEVICE, PCA_COMPONENTS
 from src.utility import make_reproducible, init_arg_parser, make_log_dir
 
+nltk.download('punkt_tab')
+nltk.download('averaged_perceptron_tagger_eng')
+
 MULTIMODAL = False
 MULTIMODAL_FILE_TYPES = ["source", "bytecode", "runtime"]
+
 
 def initialize_classifiers(random_seed: int) -> Dict[str, object]:
     """
@@ -56,6 +61,7 @@ def initialize_classifiers(random_seed: int) -> Dict[str, object]:
             predictor='gpu_predictor' if use_gpu else 'cpu_predictor'
         )
     }
+
 
 def main(config: Dict):
     # Initialize the DataPreprocessor
@@ -105,7 +111,8 @@ if __name__ == '__main__':
     parser = init_arg_parser()
     parser.add_argument("--max_features", type=int, default=MAX_FEATURES, help="Maximum features for TF-IDF vectorizer")
     parser.add_argument("--multimodal", type=bool, default=MULTIMODAL, help="Process multiple modalities at once")
-    parser.add_argument("--pca_components", type=int, default=PCA_COMPONENTS, help="Number of PCA components for dimensionality reduction")  # Add PCA argument
+    parser.add_argument("--pca_components", type=int, default=PCA_COMPONENTS,
+                        help="Number of PCA components for dimensionality reduction")  # Add PCA argument
 
     args = parser.parse_args()
     config = vars(args)

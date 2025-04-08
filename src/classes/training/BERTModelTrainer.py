@@ -33,18 +33,19 @@ class BERTModelTrainer(Trainer):
         :return: A tuple containing the loss and a dictionary of metrics.
         """
         # Prepare the inputs for the model
-        inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
+        inputs = {'input_ids': batch[0], 'attention_mask': batch[1]}
+        labels = {'labels': batch[2]}
 
         # Disable gradient computation for evaluation
         with torch.no_grad():
             outputs = self._model(**inputs)
 
             # Compute the loss
-            loss = self._loss_fn(outputs.logits, inputs['labels'])
+            loss = self._loss_fn(outputs.logits, labels)
 
             # Make predictions and compute batch metrics
             predictions = torch.sigmoid(outputs.logits).round().cpu().numpy()
-            batch_metrics = MetricsHandler.compute_metrics(batch[2].cpu().numpy(), predictions)
+            batch_metrics = MetricsHandler.compute_metrics(labels.cpu().numpy(), predictions)
 
         # Return the loss and metrics
         return loss.item(), batch_metrics
@@ -57,7 +58,8 @@ class BERTModelTrainer(Trainer):
         :return: A tuple containing the loss and a dictionary of metrics.
         """
         # Prepare inputs for the model
-        inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
+        inputs = {'input_ids': batch[0], 'attention_mask': batch[1]}
+        labels = batch[2]
 
         # Zero the parameter gradients
         self._model.zero_grad()
@@ -66,7 +68,7 @@ class BERTModelTrainer(Trainer):
         outputs = self._model(**inputs)
 
         # Compute the loss
-        loss = self._loss_fn(outputs.logits, inputs['labels'])
+        loss = self._loss_fn(outputs.logits, labels)
 
         # Backward pass and optimize
         loss.backward()
